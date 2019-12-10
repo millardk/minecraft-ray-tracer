@@ -1,0 +1,12 @@
+{
+  "name": "Keegan",
+  "age": 24,
+  "hobbies": [
+    "fpv",
+    10,
+    "asdf",
+    {
+      "bar": "foo"
+    }
+  ]
+}
