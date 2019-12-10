@@ -3,45 +3,55 @@
 #include <exception>
 #include <string>
 #include <map>
-
+#include <chrono>
 
 //#define TINYGLTF_IMPLEMENTATION
 //#define STB_IMAGE_IMPLEMENTATION
 //#define STB_IMAGE_WRITE_IMPLEMENTATION
 //
-#include "gltf/tiny_gltf.h"
+#include "tinygltf/tiny_gltf.h"
 
-
-#include "Json.h"
-
+#include "rt.h"
+#include "image.h"
 
 int main(int argc, const char * argv[]) {
 
-//    std::ifstream in(argv[1]);
-//    std::string jsonString(std::istreambuf_iterator<char>(in), {});
+
+
+//    tinygltf::TinyGLTF loader;
+//    tinygltf::Model model;
 //
-////    json::printJsonTokens(jsonString);
+//    std::string err;
+//    std::string warn;
 //
-//
-//    json::Document document(jsonString);
-//    auto name = document.getValue().getObject()["\"hobbies\""].getArray()[0].getString();
-//    std::cout << name << "\n";
+//    bool ret = loader.LoadASCIIFromFile(&model, &err, &warn, argv[1]);
+////    bool ret = loader.LoadBinaryFromFile(&model, &err, &warn, argv[1]);
+////    printf("Cameras: %d\n", model.cameras.size());
+
+    rt::Scene scene;
+
+    rt::RenderOptions renderOptions;
+    renderOptions.maxDepth = 2;
+    renderOptions.threadCount = 1;
+    renderOptions.horizontalResolution = 640;
+    renderOptions.verticalResolution = 640;
+    renderOptions.samplesPerPixel = 10;
+
+    rt::Image image(renderOptions.horizontalResolution, renderOptions.verticalResolution);
+
+    rt::RenderContext renderContext;
+    renderContext.scene = &scene;
+    renderContext.options = &renderOptions;
+    renderContext.image = &image;
+
+    rt::rayTrace(renderContext);
+
+    std::ofstream out("my.pgm");
+    image.writePgm(out);
+
+    scene.getMatAtIdx(0);
 
 
-    tinygltf::TinyGLTF loader;
-    tinygltf::Model model;
-
-    std::string err;
-    std::string warn;
-
-
-    bool ret = loader.LoadASCIIFromFile(&model, &err, &warn, argv[1]);
-//    bool ret = loader.LoadBinaryFromFile(&model, &err, &warn, argv[1]);
-
-//    printf("Cameras: %d\n", model.cameras.size());
-
-    model.buffers[0];
-    model.materials.at(0)
 
     return 0;
 }
@@ -51,17 +61,3 @@ int main(int argc, const char * argv[]) {
 
 
 
-//
-//
-//    if (!warn.empty()) {
-//        printf("Warn: %s\n", warn.c_str());
-//    }
-//
-//    if (!err.empty()) {
-//        printf("Err: %s\n", err.c_str());
-//    }
-//
-//    if (!ret) {
-//        printf("Failed to parse glTF\n");
-//        return -1;
-//    }

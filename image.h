@@ -7,6 +7,8 @@
 
 #include <iostream>
 
+namespace rt {
+
 struct Pixel {
     uint8_t r;
     uint8_t g;
@@ -29,6 +31,9 @@ struct Image {
     void writePgm(std::ostream &out) const;
     void writeBinaryPgm(std::ostream &out) const;
 };
+
+}
+
 
 
 #endif //PATH_TRACER_IMAGE_H

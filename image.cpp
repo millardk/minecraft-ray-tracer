@@ -4,6 +4,7 @@
 
 #include "image.h"
 
+using namespace rt;
 
 void Pixel::set(uint8_t r, uint8_t g, uint8_t b) {
     this->r = r;

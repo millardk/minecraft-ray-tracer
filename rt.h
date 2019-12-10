@@ -13,13 +13,15 @@
 #include "image.h"
 #include "tinygltf/tiny_gltf.h"
 
+#ifdef USE_EIGEN
+#else
+#include "linalg.h"
+#endif
+
 namespace rt {
 
 #ifdef USE_EIGEN
 #else
-
-#include "linalg.h"
-
 typedef lin::Vector3d Vector3d;
 typedef lin::Vector3i Vector3i;
 typedef lin::Vector4d Vector4d;
@@ -38,35 +40,44 @@ class Material {
 public:
     static Material *makeFromGltfMaterial(const tinygltf::Material &m);
 
-    virtual Vector3d getBRDF(const Vector3d &d1, const Vector3d &d2, const Vector3d &n) = 0;
+    virtual ~Material() = default;
+    virtual Vector3d getBRDF(const Vector3d &d1, const Vector3d &d2, const Vector3d &n) const = 0;
 };
 
 struct PbrMaterial : public Material {
     double alpha;
     Vector3d baseColor;
     bool doubleSided;
+    Vector3d emissiveFactor;
     std::string name;
     double metallicFactor;
     double roughnessFactor;
 };
 
 struct MetallicMaterial : public PbrMaterial {
-    Vector3d getBRDF(const Vector3d &d1, const Vector3d &d2, const Vector3d &n) override;
+    Vector3d getBRDF(const Vector3d &d1, const Vector3d &d2, const Vector3d &n) const override ;
 };
 
 struct DielectricMaterial : public PbrMaterial {
-    Vector3d getBRDF(const Vector3d &d1, const Vector3d &d2, const Vector3d &n) override;
+    Vector3d getBRDF(const Vector3d &d1, const Vector3d &d2, const Vector3d &n) const override;
+};
+
+struct LightSource : public PbrMaterial {
+    Vector3d getBRDF(const Vector3d &d1, const Vector3d &d2, const Vector3d &n) const override;
 };
 
 struct HitRecord {
-    bool didHit;
-    Vector3d p;
-    Vector3d n;
-    Material *m;
+    bool didHit = false;
+    double distance;
+    Vector3d point;
+    Vector3d normal;
+    int matIdx;
 };
 
 class Object {
-    virtual HitRecord findHit(const Ray &) = 0;
+public:
+    virtual ~Object() = default;
+    virtual bool doesHit(const Ray &ray, HitRecord &hit) const = 0;
 };
 
 struct Primitive {
@@ -74,19 +85,19 @@ struct Primitive {
     int matIdx;
 };
 
-class Mesh : public Object {
+struct Mesh : public Object {
     std::vector<Primitive> primitives;
     std::vector<Vector3d> vertices;
 
-    HitRecord findHit(const Ray &);
+    bool doesHit(const Ray &ray, HitRecord &hit) const;
 };
 
-class Sphere : public Object {
+struct Sphere : public Object {
     double radius;
-    Vector3d position;
-    Material *mat;
+    Vector3d point;
+    int matIdx;
 
-    HitRecord findHit(const Ray &);
+    bool doesHit(const Ray &ray, HitRecord &hit) const;
 };
 
 struct Camera {
@@ -116,7 +127,11 @@ struct Scene {
     std::vector<std::unique_ptr<Material>> materials;
     Camera camera;
 
-    HitRecord findHit(const Ray &r);
+    Scene(const tinygltf::Model &m);
+    Scene();
+
+    const Material& getMatAtIdx(int matIdx) const;
+    HitRecord findHit(const Ray &r) const;
 };
 
 struct RenderOptions {
@@ -124,6 +139,7 @@ struct RenderOptions {
     int verticalResolution;
     int maxDepth;
     int threadCount;
+    int samplesPerPixel;
 };
 
 struct RenderContext {
@@ -133,6 +149,8 @@ struct RenderContext {
 };
 
 void rayTrace(const RenderContext &ctx);
+
+int test(int count);
 
 }
 
