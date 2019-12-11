@@ -42,6 +42,7 @@ public:
 
     virtual ~Material() = default;
     virtual Vector3d getBRDF(const Vector3d &d1, const Vector3d &d2, const Vector3d &n) const = 0;
+    virtual Vector3d getScatterDir(const Vector3d &d1, const Vector3d &n) const = 0;
 };
 
 struct PbrMaterial : public Material {
@@ -56,14 +57,17 @@ struct PbrMaterial : public Material {
 
 struct MetallicMaterial : public PbrMaterial {
     Vector3d getBRDF(const Vector3d &d1, const Vector3d &d2, const Vector3d &n) const override ;
+    Vector3d getScatterDir(const Vector3d &d1, const Vector3d &n) const override;
 };
 
 struct DielectricMaterial : public PbrMaterial {
     Vector3d getBRDF(const Vector3d &d1, const Vector3d &d2, const Vector3d &n) const override;
+    Vector3d getScatterDir(const Vector3d &d1, const Vector3d &n) const override;
 };
 
 struct LightSource : public PbrMaterial {
     Vector3d getBRDF(const Vector3d &d1, const Vector3d &d2, const Vector3d &n) const override;
+    Vector3d getScatterDir(const Vector3d &d1, const Vector3d &n) const override;
 };
 
 struct HitRecord {

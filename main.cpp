@@ -33,9 +33,9 @@ int main(int argc, const char * argv[]) {
     rt::RenderOptions renderOptions;
     renderOptions.maxDepth = 20;
     renderOptions.threadCount = 8;
-    renderOptions.horizontalResolution = 640;
-    renderOptions.verticalResolution = 640;
-    renderOptions.samplesPerPixel = 30;
+    renderOptions.horizontalResolution = 320;
+    renderOptions.verticalResolution = 320;
+    renderOptions.samplesPerPixel = 1000;
 
     rt::Image image(renderOptions.horizontalResolution, renderOptions.verticalResolution);
 
@@ -47,7 +47,7 @@ int main(int argc, const char * argv[]) {
     rt::rayTrace(renderContext);
 
     std::ofstream out("my.pgm");
-    image.writePgm(out);
+    image.writeBinaryPgm(out);
 
     scene.getMatAtIdx(0);
 

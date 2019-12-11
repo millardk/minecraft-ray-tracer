@@ -10,6 +10,70 @@
 
 using namespace rt;
 
+class RandomGenerator {
+private:
+    std::default_random_engine eng;
+    std::uniform_real_distribution<double> urd;
+
+public:
+    RandomGenerator(): urd(-1,1){}
+
+    Vector3d getRandomNormalVector() {
+        double a = urd(eng);
+        double b = urd(eng);
+        double c = urd(eng);
+        Vector3d vec(a, b, c);
+        vec.normalize();
+        return vec;
+    }
+
+    Vector3d getRandomNormalVectorInHemisphere(const Vector3d v) {
+        Vector3d rvec = getRandomNormalVector();
+        if (v.dot(rvec) < 0) {
+            rvec *= -1;
+        }
+        return rvec;
+    }
+};
+RandomGenerator randomGenerator = RandomGenerator();
+
+//class RandomGenerator {
+//private:
+//    std::vector<Vector3d> store;
+//
+//public:
+//    RandomGenerator(int seed, int storeSize) {
+//        std::default_random_engine eng;
+//        std::uniform_real_distribution<double> urd(-1, 1);
+//
+//        for (int i = 0; i < storeSize; i++) {
+//            double a = urd(eng);
+//            double b = urd(eng);
+//            double c = urd(eng);
+//            Vector3d vec(a, b, c);
+//            vec.normalize();
+//            store.push_back(vec);
+//        }
+//    }
+//
+//    Vector3d getRandomNormalVector() {
+//        thread_local int idx = 0;
+//        if (idx > store.size()) {
+//            idx = 0;
+//        }
+//        return store[idx++];
+//    }
+//
+//    Vector3d getRandomNormalVectorInHemisphere(const Vector3d v) {
+//        Vector3d rvec = getRandomNormalVector();
+//        if (v.dot(rvec) < 0) {
+//            rvec *= -1;
+//        }
+//        return rvec;
+//    }
+//};
+//RandomGenerator randomGenerator = RandomGenerator(0,1000);
+
 Ray::Ray(const Vector3d &o, const Vector3d &d) : o(o), d(d) {}
 
 // ******************* Materials *******************
@@ -59,12 +123,24 @@ Vector3d MetallicMaterial::getBRDF(const Vector3d &d1, const Vector3d &d2, const
     return  baseColor;
 }
 
+Vector3d MetallicMaterial::getScatterDir(const Vector3d &d1, const Vector3d &n) const {
+    return 2 * d1.dot(n) * n - d1;
+}
+
 Vector3d DielectricMaterial::getBRDF(const Vector3d &d1, const Vector3d &d2, const Vector3d &n) const {
     return baseColor;
 }
 
+Vector3d DielectricMaterial::getScatterDir(const Vector3d &d1, const Vector3d &n) const {
+    return randomGenerator.getRandomNormalVectorInHemisphere(n);
+}
+
 Vector3d LightSource::getBRDF(const Vector3d &d1, const Vector3d &d2, const Vector3d &n) const {
     return emissiveFactor;
+}
+
+Vector3d LightSource::getScatterDir(const Vector3d &d1, const Vector3d &n) const {
+    return rt::Vector3d();
 }
 
 // ******************* Object *******************
@@ -219,6 +295,12 @@ Scene::Scene() {
     m4->roughnessFactor = 0.0;
     m4->alpha = 0;
 
+    DielectricMaterial *m5= new DielectricMaterial;
+    m5->baseColor = Vector3d(0.3, 0.3, 0.9);
+    m5->metallicFactor = 1.0;
+    m5->roughnessFactor = 0.0;
+    m5->alpha = 0;
+
 //    DielectricMaterial *m2= new DielectricMaterial;
 //    m2->baseColor = Vector3d(0.6, 0.9, 0.9);
 //    m2->metallicFactor = 1.0;
@@ -227,14 +309,14 @@ Scene::Scene() {
 
 
     Sphere *s1 = new Sphere;
-    s1->point = Vector3d(0,10,-10);
-    s1->radius = 3;
+    s1->point = Vector3d(0,59.8,-20);
+    s1->radius = 50;
     s1->matIdx = 0;
 
     Sphere *s2 = new Sphere;
-    s2->point = Vector3d(0,0,-20);
-    s2->radius = 4;
-    s2->matIdx = 1;
+    s2->point = Vector3d(5,-7,-23);
+    s2->radius = 3;
+    s2->matIdx = 5;
 
     Sphere *s3 = new Sphere;
     s3->point = Vector3d(-1010,0,-10);
@@ -252,7 +334,7 @@ Scene::Scene() {
     s5->matIdx = 2;
 
     Sphere *s6 = new Sphere;
-    s6->point = Vector3d(0,0,-1040);
+    s6->point = Vector3d(0,0,-1030);
     s6->radius = 1000;
     s6->matIdx = 2;
 
@@ -264,7 +346,12 @@ Scene::Scene() {
     Sphere *s8 = new Sphere;
     s8->point = Vector3d(0,0,1010);
     s8->radius = 1000;
-    s8->matIdx = 0;
+    s8->matIdx = 2;
+
+    Sphere *s9 = new Sphere;
+    s9->point = Vector3d(-5,-7, -27);
+    s9->radius = 3;
+    s9->matIdx = 1;
 
 
 
@@ -284,8 +371,10 @@ Scene::Scene() {
     materials.push_back(std::unique_ptr<Material>(m2));
     materials.push_back(std::unique_ptr<Material>(m3));
     materials.push_back(std::unique_ptr<Material>(m4));
+    materials.push_back(std::unique_ptr<Material>(m5));
 
-//    objects.push_back(std::unique_ptr<Object>(s1));
+
+    objects.push_back(std::unique_ptr<Object>(s1));
     objects.push_back(std::unique_ptr<Object>(s2));
     objects.push_back(std::unique_ptr<Object>(s3));
     objects.push_back(std::unique_ptr<Object>(s4));
@@ -293,6 +382,7 @@ Scene::Scene() {
     objects.push_back(std::unique_ptr<Object>(s6));
     objects.push_back(std::unique_ptr<Object>(s7));
     objects.push_back(std::unique_ptr<Object>(s8));
+    objects.push_back(std::unique_ptr<Object>(s9));
 
 
 
@@ -333,71 +423,6 @@ Vector3d entrywiseProduct(Vector3d &v1, const Vector3d &v2) {
             v1[2] * v2[2]);
 }
 
-class RandomGenerator {
-private:
-    std::default_random_engine eng;
-    std::uniform_real_distribution<double> urd;
-
-public:
-    RandomGenerator(): urd(-1,1){}
-
-    Vector3d getRandomNormalVector() {
-        double a = urd(eng);
-        double b = urd(eng);
-        double c = urd(eng);
-        Vector3d vec(a, b, c);
-        vec.normalize();
-        return vec;
-    }
-
-    Vector3d getRandomNormalVectorInHemisphere(const Vector3d v) {
-        Vector3d rvec = getRandomNormalVector();
-        if (v.dot(rvec) < 0) {
-            rvec *= -1;
-        }
-        return rvec;
-    }
-};
-RandomGenerator randomGenerator = RandomGenerator();
-
-//class RandomGenerator {
-//private:
-//    std::vector<Vector3d> store;
-//
-//public:
-//    RandomGenerator(int seed, int storeSize) {
-//        std::default_random_engine eng;
-//        std::uniform_real_distribution<double> urd(-1, 1);
-//
-//        for (int i = 0; i < storeSize; i++) {
-//            double a = urd(eng);
-//            double b = urd(eng);
-//            double c = urd(eng);
-//            Vector3d vec(a, b, c);
-//            vec.normalize();
-//            store.push_back(vec);
-//        }
-//    }
-//
-//    Vector3d getRandomNormalVector() {
-//        thread_local int idx = 0;
-//        if (idx > store.size()) {
-//            idx = 0;
-//        }
-//        return store[idx++];
-//    }
-//
-//    Vector3d getRandomNormalVectorInHemisphere(const Vector3d v) {
-//        Vector3d rvec = getRandomNormalVector();
-//        if (v.dot(rvec) < 0) {
-//            rvec *= -1;
-//        }
-//        return rvec;
-//    }
-//};
-//RandomGenerator randomGenerator = RandomGenerator(0,1000);
-
-
 Vector3d traceRayHelper(const Scene &scene, const Ray&ray, int depth, int maxDepth) {
     if (depth > maxDepth) {
         return Vector3d(0,0,0);
@@ -408,21 +433,20 @@ Vector3d traceRayHelper(const Scene &scene, const Ray&ray, int depth, int maxDep
         return Vector3d(0,0,0);
     }
 
+    const Material &material = scene.getMatAtIdx(hit.matIdx);
     Vector3d incomingReversed = -ray.d;
 
 //    Vector3d reflectDir = 2 * incomingReversed.dot(hit.normal) * hit.normal - incomingReversed;
-    Vector3d reflectDir = randomGenerator.getRandomNormalVectorInHemisphere(hit.normal);
+//    Vector3d reflectDir = randomGenerator.getRandomNormalVectorInHemisphere(hit.normal);
+    Vector3d reflectDir = material.getScatterDir(incomingReversed, hit.normal);
 
     assert(reflectDir.dot(hit.normal) >= 0);
 
-    const Material &material = scene.getMatAtIdx(hit.matIdx);
     Vector3d brdf = material.getBRDF(incomingReversed, reflectDir, hit.normal);
 
     if (dynamic_cast<const LightSource*>(&material)) {
         return brdf;
     }
-
-
 
     Ray rayOut(hit.point, reflectDir);
     Vector3d forwardResult = traceRayHelper(scene, rayOut, depth+1, maxDepth);
