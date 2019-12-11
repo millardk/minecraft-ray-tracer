@@ -55,11 +55,12 @@ Material *Material::makeFromGltfMaterial(const tinygltf::Material &m) {
 
 
 Vector3d MetallicMaterial::getBRDF(const Vector3d &d1, const Vector3d &d2, const Vector3d &n) const {
-    return d1.dot(d2) * baseColor;
+//    return d1.dot(d2) * baseColor;
+    return  baseColor;
 }
 
 Vector3d DielectricMaterial::getBRDF(const Vector3d &d1, const Vector3d &d2, const Vector3d &n) const {
-    return d1.dot(d2) * baseColor;
+    return baseColor;
 }
 
 Vector3d LightSource::getBRDF(const Vector3d &d1, const Vector3d &d2, const Vector3d &n) const {
@@ -191,24 +192,81 @@ Scene::Scene(const tinygltf::Model &m) {
 
 Scene::Scene() {
     LightSource *m0 = new LightSource;
-    m0->emissiveFactor = Vector3d(1, 1, 1);
-    m0->emissiveFactor *= 1000;
+    m0->emissiveFactor = Vector3d(3, 3, 3);
+//    m0->emissiveFactor *= 1000;
 
     MetallicMaterial *m1= new MetallicMaterial;
-    m1->baseColor = Vector3d(0.9, 0.5, 0.3);
+    m1->baseColor = Vector3d(0.9, 0.8, 0.7);
     m1->metallicFactor = 1.0;
     m1->roughnessFactor = 0.0;
     m1->alpha = 0;
 
+    DielectricMaterial *m2= new DielectricMaterial;
+    m2->baseColor = Vector3d(0.9, 0.9, 0.9);
+    m2->metallicFactor = 1.0;
+    m2->roughnessFactor = 0.0;
+    m2->alpha = 0;
+
+    DielectricMaterial *m3= new DielectricMaterial;
+    m3->baseColor = Vector3d(0.3, 0.9, 0.3);
+    m3->metallicFactor = 1.0;
+    m3->roughnessFactor = 0.0;
+    m3->alpha = 0;
+
+    DielectricMaterial *m4= new DielectricMaterial;
+    m4->baseColor = Vector3d(0.9, 0.3, 0.3);
+    m4->metallicFactor = 1.0;
+    m4->roughnessFactor = 0.0;
+    m4->alpha = 0;
+
+//    DielectricMaterial *m2= new DielectricMaterial;
+//    m2->baseColor = Vector3d(0.6, 0.9, 0.9);
+//    m2->metallicFactor = 1.0;
+//    m2->roughnessFactor = 0.0;
+//    m2->alpha = 0;
+
+
     Sphere *s1 = new Sphere;
-    s1->point = Vector3d(0,0,-20);
-    s1->radius = 4;
-    s1->matIdx = 1;
+    s1->point = Vector3d(0,10,-10);
+    s1->radius = 3;
+    s1->matIdx = 0;
 
     Sphere *s2 = new Sphere;
-    s2->point = Vector3d(0,10,-10);
-    s2->radius = 1;
-    s2->matIdx = 0;
+    s2->point = Vector3d(0,0,-20);
+    s2->radius = 4;
+    s2->matIdx = 1;
+
+    Sphere *s3 = new Sphere;
+    s3->point = Vector3d(-1010,0,-10);
+    s3->radius = 1000;
+    s3->matIdx = 3;
+
+    Sphere *s4 = new Sphere;
+    s4->point = Vector3d(1010,0,-20);
+    s4->radius = 1000;
+    s4->matIdx = 4;
+
+    Sphere *s5 = new Sphere;
+    s5->point = Vector3d(0,-1010,-20);
+    s5->radius = 1000;
+    s5->matIdx = 2;
+
+    Sphere *s6 = new Sphere;
+    s6->point = Vector3d(0,0,-1040);
+    s6->radius = 1000;
+    s6->matIdx = 2;
+
+    Sphere *s7 = new Sphere;
+    s7->point = Vector3d(0,1010,-20);
+    s7->radius = 1000;
+    s7->matIdx = 2;
+
+    Sphere *s8 = new Sphere;
+    s8->point = Vector3d(0,0,1010);
+    s8->radius = 1000;
+    s8->matIdx = 0;
+
+
 
 //    Sphere *s3 = new Sphere;
 //    s1->point = Vector3d(0,0,-20);
@@ -223,9 +281,19 @@ Scene::Scene() {
 
     materials.push_back(std::unique_ptr<Material>(m0));
     materials.push_back(std::unique_ptr<Material>(m1));
+    materials.push_back(std::unique_ptr<Material>(m2));
+    materials.push_back(std::unique_ptr<Material>(m3));
+    materials.push_back(std::unique_ptr<Material>(m4));
 
-    objects.push_back(std::unique_ptr<Object>(s1));
+//    objects.push_back(std::unique_ptr<Object>(s1));
     objects.push_back(std::unique_ptr<Object>(s2));
+    objects.push_back(std::unique_ptr<Object>(s3));
+    objects.push_back(std::unique_ptr<Object>(s4));
+    objects.push_back(std::unique_ptr<Object>(s5));
+    objects.push_back(std::unique_ptr<Object>(s6));
+    objects.push_back(std::unique_ptr<Object>(s7));
+    objects.push_back(std::unique_ptr<Object>(s8));
+
 
 
     camera.focalPoint = Vector3d(0,0,0);
@@ -374,7 +442,12 @@ Pixel traceRay(const RenderContext &ctx, const Ray &ray) {
 
     // convert to 0-255
     for (int i = 0; i < 3; i++) {
-        color[i] = std::max(0.0, std::min(255.0, std::round(color[i] * 255.0)));
+
+        double gammaAdjusted = pow(color[i], 0.5);
+
+        double scaled = gammaAdjusted * 255.0;
+
+        color[i] = std::max(0.0, std::min(255.0, std::round(scaled)));
     }
     return Pixel(color[0], color[1], color[2]);
 }

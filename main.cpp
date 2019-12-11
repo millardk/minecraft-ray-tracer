@@ -31,11 +31,11 @@ int main(int argc, const char * argv[]) {
     rt::Scene scene;
 
     rt::RenderOptions renderOptions;
-    renderOptions.maxDepth = 2;
-    renderOptions.threadCount = 1;
+    renderOptions.maxDepth = 20;
+    renderOptions.threadCount = 8;
     renderOptions.horizontalResolution = 640;
     renderOptions.verticalResolution = 640;
-    renderOptions.samplesPerPixel = 10;
+    renderOptions.samplesPerPixel = 30;
 
     rt::Image image(renderOptions.horizontalResolution, renderOptions.verticalResolution);
 
