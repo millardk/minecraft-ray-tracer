@@ -41,33 +41,19 @@ public:
     static Material *makeFromGltfMaterial(const tinygltf::Material &m);
 
     virtual ~Material() = default;
-    virtual Vector3d getBRDF(const Vector3d &d1, const Vector3d &d2, const Vector3d &n) const = 0;
-    virtual Vector3d getScatterDir(const Vector3d &d1, const Vector3d &n) const = 0;
+    virtual std::pair<Vector3d, Vector3d> getBRDF(const Vector3d &toEye, const Vector3d &toLight, const Vector3d &normal) const = 0;
 };
 
 struct PbrMaterial : public Material {
     double alpha;
     Vector3d baseColor;
     bool doubleSided;
-    Vector3d emissiveFactor;
     std::string name;
     double metallicFactor;
     double roughnessFactor;
-};
 
-struct MetallicMaterial : public PbrMaterial {
-    Vector3d getBRDF(const Vector3d &d1, const Vector3d &d2, const Vector3d &n) const override ;
-    Vector3d getScatterDir(const Vector3d &d1, const Vector3d &n) const override;
-};
+    std::pair<Vector3d, Vector3d> getBRDF(const Vector3d &toEye, const Vector3d &toLight, const Vector3d &normal) const override ;
 
-struct DielectricMaterial : public PbrMaterial {
-    Vector3d getBRDF(const Vector3d &d1, const Vector3d &d2, const Vector3d &n) const override;
-    Vector3d getScatterDir(const Vector3d &d1, const Vector3d &n) const override;
-};
-
-struct LightSource : public PbrMaterial {
-    Vector3d getBRDF(const Vector3d &d1, const Vector3d &d2, const Vector3d &n) const override;
-    Vector3d getScatterDir(const Vector3d &d1, const Vector3d &n) const override;
 };
 
 struct HitRecord {
@@ -76,6 +62,11 @@ struct HitRecord {
     Vector3d point;
     Vector3d normal;
     int matIdx;
+};
+
+struct LightSource {
+    Vector3d position;
+    Vector3d emittance;
 };
 
 class Object {
@@ -129,6 +120,7 @@ struct Camera {
 struct Scene {
     std::vector<std::unique_ptr<Object>> objects;
     std::vector<std::unique_ptr<Material>> materials;
+    std::vector<LightSource> lights;
     Camera camera;
 
     Scene(const tinygltf::Model &m);
@@ -143,7 +135,6 @@ struct RenderOptions {
     int verticalResolution;
     int maxDepth;
     int threadCount;
-    int samplesPerPixel;
 };
 
 struct RenderContext {
@@ -154,7 +145,7 @@ struct RenderContext {
 
 void rayTrace(const RenderContext &ctx);
 
-int test(int count);
+int test();
 
 }
 

@@ -8,6 +8,8 @@
 #include <thread>
 #include <random>
 
+constexpr double MATH_PI = 3.141592653589793238462643383279502884;
+
 using namespace rt;
 
 class RandomGenerator {
@@ -36,6 +38,13 @@ public:
     }
 };
 RandomGenerator randomGenerator = RandomGenerator();
+
+Vector3d entrywiseProduct(const Vector3d &v1, const Vector3d &v2) {
+    return Vector3d(
+            v1[0] * v2[0],
+            v1[1] * v2[1],
+            v1[2] * v2[2]);
+}
 
 //class RandomGenerator {
 //private:
@@ -80,22 +89,7 @@ Ray::Ray(const Vector3d &o, const Vector3d &d) : o(o), d(d) {}
 
 Material *Material::makeFromGltfMaterial(const tinygltf::Material &m) {
     const auto pbr = m.pbrMetallicRoughness;
-    PbrMaterial *ret;
-
-    if (pbr.extras.Has("emissiveFactor")) {
-        ret = new LightSource;
-        const auto &x = pbr.extras.Get("emissiveFactor");
-        ret -> emissiveFactor[0] = x.Get(0).GetNumberAsDouble();
-        ret -> emissiveFactor[1] = x.Get(1).GetNumberAsDouble();
-        ret -> emissiveFactor[2] = x.Get(2).GetNumberAsDouble();
-        return ret;
-    }
-
-    if (pbr.metallicFactor > pbr.roughnessFactor) {
-        ret = new MetallicMaterial;
-    } else {
-        ret = new DielectricMaterial;
-    }
+    PbrMaterial *ret = new PbrMaterial;
 
     ret -> alpha = pbr.baseColorFactor[3];
     ret->baseColor = Vector3d(
@@ -107,40 +101,46 @@ Material *Material::makeFromGltfMaterial(const tinygltf::Material &m) {
     ret->metallicFactor = pbr.metallicFactor;
     ret->roughnessFactor = pbr.roughnessFactor;
 
-    if (pbr.extras.Has("emissiveFactor")) {
-        const auto &x = pbr.extras.Get("emissiveFactor");
-        ret -> emissiveFactor[0] = x.Get(0).GetNumberAsDouble();
-        ret -> emissiveFactor[1] = x.Get(1).GetNumberAsDouble();
-        ret -> emissiveFactor[2] = x.Get(2).GetNumberAsDouble();
-    }
-
     return ret;
 }
 
+Vector3d lerp(const Vector3d &v1, const Vector3d &v2, double a) {
+    return Vector3d(
+            (v2[0]-v1[0])*a + v1[0],
+            (v2[1]-v1[1])*a + v1[1],
+            (v2[2]-v1[2])*a + v1[2]);
 
-Vector3d MetallicMaterial::getBRDF(const Vector3d &d1, const Vector3d &d2, const Vector3d &n) const {
-//    return d1.dot(d2) * baseColor;
-    return  baseColor;
 }
 
-Vector3d MetallicMaterial::getScatterDir(const Vector3d &d1, const Vector3d &n) const {
-    return 2 * d1.dot(n) * n - d1;
-}
 
-Vector3d DielectricMaterial::getBRDF(const Vector3d &d1, const Vector3d &d2, const Vector3d &n) const {
-    return baseColor;
-}
+Vector3d specularReflection(const Material &m, )
 
-Vector3d DielectricMaterial::getScatterDir(const Vector3d &d1, const Vector3d &n) const {
-    return randomGenerator.getRandomNormalVectorInHemisphere(n);
-}
 
-Vector3d LightSource::getBRDF(const Vector3d &d1, const Vector3d &d2, const Vector3d &n) const {
-    return emissiveFactor;
-}
+std::pair<Vector3d, Vector3d> PbrMaterial::getBRDF(const Vector3d &toEye, const Vector3d &toLight,
+                                                          const Vector3d &normal) const {
+    const Vector3d dielectricSpecular = Vector3d(0.04, 0.04, 0.04);
+    const Vector3d black = Vector3d(0, 0, 0);
+    const Vector3d one = Vector3d(1,1,1);
 
-Vector3d LightSource::getScatterDir(const Vector3d &d1, const Vector3d &n) const {
-    return rt::Vector3d();
+    const Vector3d cdiff = lerp(baseColor *(1-dielectricSpecular[0]), black, metallicFactor);
+    const Vector3d F0 = lerp(dielectricSpecular, baseColor, metallicFactor);
+    const double a = roughnessFactor * roughnessFactor;
+
+    const Vector3d V = toEye;
+    const Vector3d L = toLight;
+    const Vector3d N = normal;
+    const Vector3d H = (L + V) / (L + V).norm();
+
+    const Vector3d F = F0 + (one - F0) * pow(1 - V.dot(H), 5);
+    const double G = 0.5 / ( N.dot(L) * sqrt(N.dot(V)*N.dot(V)*(1-a*a)+a*a) + N.dot(V) * sqrt(  N.dot(L)*N.dot(L)*(1-a*a) + a*a ) );
+    const double D = a*a / ( MATH_PI * ( N.dot(H)*N.dot(H) * (a*a - 1) + 1) * ( N.dot(H)*N.dot(H) * (a*a - 1) + 1));
+
+    const Vector3d diffuse = cdiff / MATH_PI;
+
+    const Vector3d fDiffuse = entrywiseProduct(one-F, diffuse);
+    const Vector3d fSpecular = F * G * D / (4 * N.dot(L) * N.dot(V));
+
+    return std::make_pair(fDiffuse,fSpecular);
 }
 
 // ******************* Object *******************
@@ -267,51 +267,54 @@ Scene::Scene(const tinygltf::Model &m) {
 }
 
 Scene::Scene() {
-    LightSource *m0 = new LightSource;
-    m0->emissiveFactor = Vector3d(3, 3, 3);
-//    m0->emissiveFactor *= 1000;
 
-    MetallicMaterial *m1= new MetallicMaterial;
+    PbrMaterial *m0= new PbrMaterial;
+    m0->baseColor = Vector3d(0.9, 0.8, 0.7);
+    m0->metallicFactor = 1.0;
+    m0->roughnessFactor = 0.0;
+    m0->alpha = 0;
+
+    PbrMaterial *m1= new PbrMaterial;
     m1->baseColor = Vector3d(0.9, 0.8, 0.7);
     m1->metallicFactor = 1.0;
     m1->roughnessFactor = 0.0;
     m1->alpha = 0;
 
-    DielectricMaterial *m2= new DielectricMaterial;
+    PbrMaterial *m2= new PbrMaterial;
     m2->baseColor = Vector3d(0.9, 0.9, 0.9);
     m2->metallicFactor = 1.0;
     m2->roughnessFactor = 0.0;
     m2->alpha = 0;
 
-    DielectricMaterial *m3= new DielectricMaterial;
+    PbrMaterial *m3= new PbrMaterial;
     m3->baseColor = Vector3d(0.3, 0.9, 0.3);
     m3->metallicFactor = 1.0;
     m3->roughnessFactor = 0.0;
     m3->alpha = 0;
 
-    DielectricMaterial *m4= new DielectricMaterial;
+    PbrMaterial *m4= new PbrMaterial;
     m4->baseColor = Vector3d(0.9, 0.3, 0.3);
     m4->metallicFactor = 1.0;
     m4->roughnessFactor = 0.0;
     m4->alpha = 0;
 
-    DielectricMaterial *m5= new DielectricMaterial;
+    PbrMaterial *m5= new PbrMaterial;
     m5->baseColor = Vector3d(0.3, 0.3, 0.9);
     m5->metallicFactor = 1.0;
     m5->roughnessFactor = 0.0;
     m5->alpha = 0;
 
-//    DielectricMaterial *m2= new DielectricMaterial;
+//    PbrMaterial *m2= new PbrMaterial;
 //    m2->baseColor = Vector3d(0.6, 0.9, 0.9);
 //    m2->metallicFactor = 1.0;
 //    m2->roughnessFactor = 0.0;
 //    m2->alpha = 0;
 
 
-    Sphere *s1 = new Sphere;
-    s1->point = Vector3d(0,59.8,-20);
-    s1->radius = 50;
-    s1->matIdx = 0;
+//    Sphere *s1 = new Sphere;
+//    s1->point = Vector3d(0,59.8,-20);
+//    s1->radius = 50;
+//    s1->matIdx = 0;
 
     Sphere *s2 = new Sphere;
     s2->point = Vector3d(5,-7,-23);
@@ -355,16 +358,9 @@ Scene::Scene() {
 
 
 
-//    Sphere *s3 = new Sphere;
-//    s1->point = Vector3d(0,0,-20);
-//    s1->radius = 4;
-//    s1->matIdx = 1;
-//
-//    Sphere *s4 = new Sphere;
-//    s1->point = Vector3d(0,0,-20);
-//    s1->radius = 4;
-//    s1->matIdx = 1;
-//
+    LightSource light;
+    light.position = Vector3d(0,10,-20);
+    light.emittance = Vector3d(1,1,1);
 
     materials.push_back(std::unique_ptr<Material>(m0));
     materials.push_back(std::unique_ptr<Material>(m1));
@@ -374,7 +370,7 @@ Scene::Scene() {
     materials.push_back(std::unique_ptr<Material>(m5));
 
 
-    objects.push_back(std::unique_ptr<Object>(s1));
+//    objects.push_back(std::unique_ptr<Object>(s1));
     objects.push_back(std::unique_ptr<Object>(s2));
     objects.push_back(std::unique_ptr<Object>(s3));
     objects.push_back(std::unique_ptr<Object>(s4));
@@ -383,7 +379,6 @@ Scene::Scene() {
     objects.push_back(std::unique_ptr<Object>(s7));
     objects.push_back(std::unique_ptr<Object>(s8));
     objects.push_back(std::unique_ptr<Object>(s9));
-
 
 
     camera.focalPoint = Vector3d(0,0,0);
@@ -416,13 +411,6 @@ const Material& Scene::getMatAtIdx(int matIdx) const {
 
 // ******************* Ray Tracing *******************
 
-Vector3d entrywiseProduct(Vector3d &v1, const Vector3d &v2) {
-    return Vector3d(
-            v1[0] * v2[0],
-            v1[1] * v2[1],
-            v1[2] * v2[2]);
-}
-
 Vector3d traceRayHelper(const Scene &scene, const Ray&ray, int depth, int maxDepth) {
     if (depth > maxDepth) {
         return Vector3d(0,0,0);
@@ -434,44 +422,52 @@ Vector3d traceRayHelper(const Scene &scene, const Ray&ray, int depth, int maxDep
     }
 
     const Material &material = scene.getMatAtIdx(hit.matIdx);
-    Vector3d incomingReversed = -ray.d;
+    const Vector3d incomingReversed = -ray.d;
 
-//    Vector3d reflectDir = 2 * incomingReversed.dot(hit.normal) * hit.normal - incomingReversed;
-//    Vector3d reflectDir = randomGenerator.getRandomNormalVectorInHemisphere(hit.normal);
-    Vector3d reflectDir = material.getScatterDir(incomingReversed, hit.normal);
+    const Vector3d reflectDir = 2 * incomingReversed.dot(hit.normal) * hit.normal - incomingReversed;
+    const Ray reflectRay(hit.point, reflectDir);
 
-    assert(reflectDir.dot(hit.normal) >= 0);
 
-    Vector3d brdf = material.getBRDF(incomingReversed, reflectDir, hit.normal);
+    Vector3d colorOut(0,0,0);
 
-    if (dynamic_cast<const LightSource*>(&material)) {
-        return brdf;
+    Vector3d reflectColor = traceRayHelper(scene, reflectRay, depth+1, maxDepth);
+    const auto x =  material.getBRDF(incomingReversed, reflectDir, hit.normal);
+    colorOut = colorOut + entrywiseProduct(x.second, reflectColor);
+
+
+    for (const LightSource &light : scene.lights) {
+
+        Vector3d toLightVector = light.position - hit.point;
+        double toLightD = toLightVector.norm();
+        toLightVector.normalize();
+
+        double toLightDotNormal = toLightVector.dot(hit.normal);
+        if (toLightDotNormal < 0) {
+            continue;
+        }
+
+        HitRecord lightHit = scene.findHit(ray);
+        if (lightHit.didHit && lightHit.distance < toLightD) {
+            continue;
+        }
+
+        const auto brdf =  material.getBRDF(incomingReversed, reflectDir, hit.normal);
+        const auto diffuseColor =  entrywiseProduct(brdf.first, light.emittance);
+        const auto specularColor = entrywiseProduct(brdf.second, light.emittance);
+
+        colorOut = colorOut + diffuseColor + specularColor;
     }
 
-    Ray rayOut(hit.point, reflectDir);
-    Vector3d forwardResult = traceRayHelper(scene, rayOut, depth+1, maxDepth);
-    Vector3d ret = entrywiseProduct(brdf, forwardResult);
-
-    return ret;
+    return colorOut;
 }
 
 Pixel traceRay(const RenderContext &ctx, const Ray &ray) {
-
-    Vector3d agg;
-    for (int sample = 0; sample < ctx.options->samplesPerPixel; sample++) {
-        Vector3d colorSample = traceRayHelper(*ctx.scene, ray, 1, ctx.options->maxDepth);
-        agg = agg + colorSample;
-    }
-    Vector3d color = agg / ctx.options->samplesPerPixel;
+    Vector3d colorSample = traceRayHelper(*ctx.scene, ray, 1, ctx.options->maxDepth);
+    Vector3d color;
 
     // convert to 0-255
     for (int i = 0; i < 3; i++) {
-
-        double gammaAdjusted = pow(color[i], 0.5);
-
-        double scaled = gammaAdjusted * 255.0;
-
-        color[i] = std::max(0.0, std::min(255.0, std::round(scaled)));
+        color[i] = std::max(0.0, std::min(255.0, std::round(colorSample[i] * 255.0)));
     }
     return Pixel(color[0], color[1], color[2]);
 }
@@ -508,13 +504,14 @@ void rt::rayTrace(const RenderContext &ctx) {
     }
 }
 
-int rt::test(int count) {
-    double ret = 0;
-    for (int i = 0; i < count; i++) {
-        auto x = randomGenerator.getRandomNormalVector();
-        ret += x[0] + x[1] + x[2];
-    }
-    return ret;
+int rt::test() {
+    Vector3d v1(-1,-2,-3);
+    Vector3d v2(-5,-6,-7);
+    double a = 0.75;
+
+    Vector3d result = lerp(v2,v1,a);
+
+    std::cout << result << std::endl;
 }
 
 

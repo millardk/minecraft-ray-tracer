@@ -31,11 +31,10 @@ int main(int argc, const char * argv[]) {
     rt::Scene scene;
 
     rt::RenderOptions renderOptions;
-    renderOptions.maxDepth = 20;
+    renderOptions.maxDepth = 5;
     renderOptions.threadCount = 8;
     renderOptions.horizontalResolution = 320;
     renderOptions.verticalResolution = 320;
-    renderOptions.samplesPerPixel = 1000;
 
     rt::Image image(renderOptions.horizontalResolution, renderOptions.verticalResolution);
 
@@ -51,6 +50,7 @@ int main(int argc, const char * argv[]) {
 
     scene.getMatAtIdx(0);
 
+//    rt::test();
 
 
     return 0;
