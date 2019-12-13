@@ -51,7 +51,7 @@ void setScene1(rt::Scene &s, double widthAspect, double heightAspect) {
     s.ambientLight = Vector3d(0.3,0.3,0.3);
 
     auto *camera = new PerspectiveCamera;
-    camera->focalPoint = Vector3d(-70,90,1080);
+    camera->focalPoint = Vector3d(-70,87,1080);
     camera->lookPoint = Vector3d(-45,70,1150);
     camera->upVector = Vector3d(0,1,0);
     camera->imagePlaneDistance = 2.0;
@@ -169,7 +169,6 @@ void setScene2(rt::Scene &s, double widthAspect, double heightAspect) {
 int main(int argc, const char * argv[]) {
     using namespace rt;
 
-
     if (argc < 3) {
 		std::cout << "usage: sceneNum heightRes threadCount(default 8)\n";
 		return 1;
@@ -177,8 +176,6 @@ int main(int argc, const char * argv[]) {
 	
 	int sceneNum = std::stoi(argv[1]);
 	int resScale = std::stoi(argv[2]);
-	
-	
 	
 //    double heightAspect = 1;
 //    double widthAspect = 1.6;

@@ -35,24 +35,31 @@ void Reader::readBlocks(std::string blockFilePath) {
 
 void Reader::readAssets() {
 
-//    auto grass_top_tex = new Texture("./textures/green_wool.PPM");
-    auto grass_side_tex = new Texture("./textures/grass_side.PPM");
-    auto diamond_block_tex = new Texture("./textures/diamond_block.PPM");
-    auto water_still_tex = new Texture("./textures/water_still.PPM");
-    auto sand_tex = new Texture("./textures/sand.PPM");
-    auto log_oak_tex = new Texture("./textures/log_oak.PPM");
-    auto wool_colored_red_tex = new Texture("./textures/wool_colored_red.PPM");
-    auto wool_colored_green_tex = new Texture("./textures/wool_colored_green.PPM");
-    auto wool_colored_silver_tex = new Texture("./textures/wool_colored_silver.PPM");
-    auto dirt_tex = new Texture("./textures/dirt.PPM");
-    auto gravel_tex = new Texture("./textures/gravel.PPM");
-    auto coal_ore_tex = new Texture("./textures/coal_ore.PPM");
-    auto diamond_ore_tex = new Texture("./textures/diamond_ore.PPM");
-    auto stone_tex = new Texture("./textures/stone.PPM");
-    auto sandstone_top_tex = new Texture("./textures/sandstone_top.PPM");
-    auto sandstone_normal_tex = new Texture("./textures/sandstone_normal.PPM");
-    auto gold_block_tex = new Texture("./textures/gold_block.PPM");
+    const std::string tex_path = "./textures/";
+//    auto grass_top_tex = new Texture(tex_path+"green_wool.PPM");
+    auto grass_side_tex = new Texture(tex_path+"grass_side.PPM");
+    auto diamond_block_tex = new Texture(tex_path+"diamond_block.PPM");
+    auto water_still_tex = new Texture(tex_path+"water_still.PPM");
+    auto sand_tex = new Texture(tex_path+"sand.PPM");
+    auto log_oak_tex = new Texture(tex_path+"log_oak.PPM");
+    auto wool_colored_red_tex = new Texture(tex_path+"wool_colored_red.PPM");
+    auto wool_colored_green_tex = new Texture(tex_path+"wool_colored_green.PPM");
+    auto wool_colored_silver_tex = new Texture(tex_path+"wool_colored_silver.PPM");
+    auto dirt_tex = new Texture(tex_path+"dirt.PPM");
+    auto gravel_tex = new Texture(tex_path+"gravel.PPM");
+    auto coal_ore_tex = new Texture(tex_path+"coal_ore.PPM");
+    auto diamond_ore_tex = new Texture(tex_path+"diamond_ore.PPM");
+    auto stone_tex = new Texture(tex_path+"stone.PPM");
+    auto sandstone_top_tex = new Texture(tex_path+"sandstone_top.PPM");
+    auto sandstone_normal_tex = new Texture(tex_path+"sandstone_normal.PPM");
+    auto gold_block_tex = new Texture(tex_path+"gold_block.PPM");
 
+    auto pumpkin_side_tex = new Texture(tex_path+"pumpkin_side.PPM");
+    auto pumpkin_top_tex = new Texture(tex_path+"pumpkin_side.PPM");
+    auto melon_side_tex = new Texture(tex_path+"melon_side.PPM");
+    auto melon_top_tex = new Texture(tex_path+"melon_side.PPM");
+    auto cactus_side_tex = new Texture(tex_path+"cactus_side.PPM");
+    auto cactus_top_tex = new Texture(tex_path+"cactus_side.PPM");
 
 
     MaterialPart watery(0.2,0.3,0.3,0.6,10);
@@ -81,7 +88,12 @@ void Reader::readAssets() {
     auto sandStoneNormalMat = new TextureMaterial(sandstone_normal_tex, rough);
     auto diamondOreMat = new TextureMaterial(diamond_ore_tex, rough);
     auto goldBlockMat = new TextureMaterial(gold_block_tex, shiny);
-
+    auto cactusTopMat = new TextureMaterial(cactus_top_tex, rough);
+    auto cactusSideMat = new TextureMaterial(cactus_side_tex, rough);
+    auto melonTopMat = new TextureMaterial(melon_top_tex, rough);
+    auto melonSideMat = new TextureMaterial(melon_side_tex, rough);
+    auto pumpkinTopMat = new TextureMaterial(pumpkin_top_tex, rough);
+    auto pumpkinSideMat = new TextureMaterial(pumpkin_side_tex, rough);
 
 
     BlockMaterial defaultBlock = BlockMaterial::makeUniformBlock(defaultMat);
@@ -99,7 +111,9 @@ void Reader::readAssets() {
     BlockMaterial diamondOre = BlockMaterial::makeUniformBlock(diamondOreMat);
     BlockMaterial goldBlock = BlockMaterial::makeUniformBlock(goldBlockMat);
     BlockMaterial silverWool = BlockMaterial::makeUniformBlock(goldBlockMat);
-
+    BlockMaterial pumpkin = BlockMaterial::makeTopAndSideBlock(pumpkinTopMat, pumpkinSideMat);
+    BlockMaterial melon = BlockMaterial::makeTopAndSideBlock(melonTopMat, melonSideMat);
+    BlockMaterial cactus = BlockMaterial::makeTopAndSideBlock(cactusTopMat, cactusSideMat);
 
 
     blockMaterials[0] = defaultBlock;
@@ -117,6 +131,9 @@ void Reader::readAssets() {
     blockMaterials[DIAMOND_ORE] = diamondOre;
     blockMaterials[GOLD_BLOCK] = silverWool;
     blockMaterials[IRON_BLOCK] = goldBlock;
+    blockMaterials[CACTUS] = cactus;
+    blockMaterials[PUMPKIN] = pumpkin;
+    blockMaterials[MELON] = melon;
 }
 
 void Reader::readIntoScene(Scene &s) {

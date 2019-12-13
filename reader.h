@@ -27,6 +27,11 @@ enum BlockType {
     DIAMOND_BLOCK=57,
     GOLD_BLOCK=41,
     IRON_BLOCK=42,
+    MELON=103,
+    PUMPKIN=86,
+    CACTUS=81,
+
+
 };
 
 class Reader {
