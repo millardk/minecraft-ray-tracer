@@ -105,12 +105,6 @@ void setScene1(rt::Scene &s, double widthAspect, double heightAspect) {
     s.sphereMaterials.push_back(sm);
 
 
-
-
-//    s.skyBoxEnabled = true;
-//    s.textureSkySphereEnabled = false;
-//    s.skyBoxColor = Vector3d(135, 206, 235) / 255.0L;
-
     s.skyBoxEnabled = true;
     s.textureSkySphereEnabled = true;
 //    Texture *skyBoxTex = new Texture("./textures/sky_box2.PPM");
@@ -133,7 +127,7 @@ void setScene2(rt::Scene &s, double widthAspect, double heightAspect) {
     r.readIntoScene(s);
     
     LightSource light;
-    light.position = Vector3d(-200,200,1050);
+    light.position = Vector3d(-200,300,1050);
     light.emittance = Vector3d(1,1,1);
     s.lights.push_back(light);
 
@@ -142,7 +136,7 @@ void setScene2(rt::Scene &s, double widthAspect, double heightAspect) {
     auto *camera = new PerspectiveCamera; 
     camera->focalPoint = Vector3d(0,120,1200);
     camera->lookPoint = camera->focalPoint - Vector3d(0,20,0);
-    camera->upVector = Vector3d(0,1,0);
+    camera->upVector = Vector3d(1,0,0);
     camera->imagePlaneDistance = 0.5;
     
     camera->vB1 = -heightAspect;
@@ -152,14 +146,24 @@ void setScene2(rt::Scene &s, double widthAspect, double heightAspect) {
     camera->init();
     s.camera = camera;
 
+    Material sm;
+    sm.ka = Vector3d(0.1,0.1,0.1);
+    sm.kd = Vector3d(0.2,0.2,0.2);
+    sm.ks = Vector3d(1.0,1.0,1.0);
+    sm.kr = Vector3d(1.0,1.0,1.0);
+    sm.ns = 10;
+    s.sphereMaterials.push_back(sm);
 
-    //~ Sphere s1;
-    //~ s1.type = -1;
-    //~ s1.r = 5;
-    //~ s1.p = Vector3d(-74, 67, 1127);
-    //~ s.spheres.push_back(s1);
+    Sphere s1;
+    s1.type = -1;
+    s1.r = 5;
+    s1.p = camera->focalPoint + camera->lv*40;
+    s.spheres.push_back(s1);
    
-    s.skyBoxEnabled = false;
+    s.skyBoxEnabled = true;
+    s.textureSkySphereEnabled = false;
+    s.skyBoxColor = Vector3d(135, 206, 235) / 255.0L;
+
 }
 
 int main(int argc, const char * argv[]) {
@@ -176,13 +180,18 @@ int main(int argc, const char * argv[]) {
 	
 	
 	
-    double heightAspect = 1;
-    double widthAspect = 1.6;
-    
+//    double heightAspect = 1;
+//    double widthAspect = 1.6;
+
+    double heightAspect, widthAspect;
     Scene scene;
     if (sceneNum == 1) {
+        heightAspect = 1;
+        widthAspect = 1.6;
 		setScene1(scene, widthAspect, heightAspect);
 	} else if (sceneNum == 2) {
+        heightAspect = 1;
+        widthAspect = 1;
 	    setScene2(scene, widthAspect, heightAspect);
 	}
 
