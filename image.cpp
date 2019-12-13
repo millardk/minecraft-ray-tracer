@@ -57,13 +57,43 @@ void Image::writeBinaryPgm(std::ostream &out) const {
     delete[] row;
 }
 
+//Image::Image(std::string filename) {
+//
+//    filename = "./textures/"+filename;
+//
+//    auto width = std::size_t{0};
+//    auto height = std::size_t{0};
+//    auto pixel_data = std::vector<std::uint8_t>{};
+//    auto ifs = std::ifstream(filename, std::ios::binary);
+//    thinks::ReadPpmImage(ifs, &width, &height, &pixel_data);
+//    ifs.close();
+//
+//    this->width = width;
+//    this->height = height;
+//
+//    for (int i = 0; i < pixel_data.size(); i+=3) {
+//        pixels.push_back(Pixel(
+//                pixel_data[i],
+//                pixel_data[i+1],
+//                pixel_data[i+2]));
+//    }
+//}
+
 Image::Image(std::string filename) {
     std::ifstream in(filename);
 
     std::string magicNumber;
-    in >> magicNumber >> width >> height;
-
+    int maximum;
+    in >> magicNumber >> width >> height >> maximum;
     in.get();
+
+//    width = 16;
+//    height = 16;
+//    for(int i = 0; i < 13; i++) {
+//        char c = in.get();
+//        c;
+//    }
+
     pixels.reserve(width*height);
 
     for (int x = 0; x < width; x++) {
@@ -79,8 +109,8 @@ Image::Image(std::string filename) {
 }
 
 Pixel Image::sampleAt(double a, double b) const {
-    int x = a * (width-1);
-    int y = a * (height-1);
+    int x = std::abs((int)(a * width) % width);
+    int y = std::abs((int)(b * height) % height);
     return pxAt(y,x);
 }
 

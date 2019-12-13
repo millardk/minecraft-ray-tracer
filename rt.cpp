@@ -130,18 +130,29 @@ bool BoxStore::doesHit(const Ray &r, HitRecord &hit) const {
     if (hit.didHit) {
 
         if (abs(hit.normal[0] > 1.0-epsilon)) {
+            hit.a = hit.point[1];
+            hit.b = hit.point[2];
+
             if (hit.normal[0] > 0) {
                 hit.side =  SIDE_EAST;
             } else {
                 hit.side = SIDE_WEST;
             }
+
         } else if (abs(hit.normal[1] > 1.0-epsilon)) {
+            hit.a = hit.point[0];
+            hit.b = hit.point[2];
+
             if (hit.normal[1] > 0) {
                 hit.side =  SIDE_TOP;
             } else {
                 hit.side = SIDE_BOTTOM;
             }
+
         } else if (abs(hit.normal[2] > 1.0-epsilon)) {
+            hit.a = hit.point[0];
+            hit.b = hit.point[1];
+
             if (hit.normal[2] > 0) {
                 hit.side =  SIDE_SOUTH;
             } else {
@@ -333,7 +344,7 @@ Material SolidColorMaterial::getMaterialAt(double a, double b) const {
 }
 
 Material TextureMaterial::getMaterialAt(double a, double b) const {
-    return Material();
+    return Material::matFromPixel(t->sampleAt(a,b));
 }
 
 BlockMaterial BlockMaterial::makeUniformBlock(MetaMaterial *mat) {
@@ -357,3 +368,22 @@ Material BlockMaterial::getMaterialAt(double a, double b, int side) const {
     return mats[side]->getMaterialAt(a,b);
 }
 
+Material Material::matFromHex(int r, int g, int b) {
+    Material ret;
+    const Vector3d scaledValues = Vector3d(
+            r/255.0L,
+            g/255.0L,
+            b/255.0L);
+
+    ret.ka = 0.3 * scaledValues;
+    ret.kd = 0.7 * scaledValues;
+    ret.ks = 0.9 * scaledValues;
+    ret.ns = 10;
+
+    return ret;
+
+}
+
+Material Material::matFromPixel(Pixel p) {
+    return matFromHex(p.r,p.g,p.b);
+}

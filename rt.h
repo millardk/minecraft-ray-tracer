@@ -23,6 +23,10 @@ struct Material {
     Vector3d kd;
     Vector3d ks;
     double ns;
+
+    static Material matFromHex(int r, int g, int b);
+    static Material matFromPixel(Pixel p);
+
     Material(const Vector3d &ka, const Vector3d &kd, const Vector3d &ks, double ns): ka(ka), kd(kd), ks(ks), ns(ns) {}
     Material(): ka(Vector3d(0.2,0.2,0.2)), kd(Vector3d(0.5,0.5,0.5)), ks(Vector3d(0.8,0.8,0.8)), ns(10) {}
     Material(const Material &m) = default;
@@ -42,7 +46,9 @@ struct BlockMaterial {
 };
 
 struct TextureMaterial : MetaMaterial {
+    Texture *t;
 
+    TextureMaterial(Texture *t): t(t) {}
 
     Material getMaterialAt(double a, double b) const override;
 };
@@ -58,8 +64,8 @@ struct HitRecord {
     double distance;
     Vector3d point;
     Vector3d normal;
-    int a;
-    int b;
+    double a;
+    double b;
     int side;
     int type;
 };

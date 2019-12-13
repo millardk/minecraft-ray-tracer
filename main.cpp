@@ -59,7 +59,7 @@ void setCameraAndLights(rt::Scene &s) {
     camera->focalPoint = Vector3d(-90,100,35);
     camera->lookPoint = Vector3d(-75,70,55);
     camera->upVector = Vector3d(0,1,0);
-    camera->imagePlaneDistance = 2;
+    camera->imagePlaneDistance = 6;
     camera->vB1 = -1;
     camera->vB2 = 1;
     camera->hB1 = -1;
@@ -78,44 +78,40 @@ int main(int argc, const char * argv[]) {
 
     using namespace rt;
 
-    Texture t("./textures/grass_side.PPM");
 
-    Pixel p = t.sampleAt(0,.5);
-    std::cout << std::to_string(p.r) << " " << std::to_string(p.g) << " " << std::to_string(p.b) << '\n';
 
-    Pixel p2 = t.sampleAt(1,.5);
-    std::cout << std::to_string(p2.r) << " " << std::to_string(p2.g) << " " << std::to_string(p2.b) << '\n';
+    auto blockFilePath = "/Users/keegan/Desktop/Enklume-master/out.txt";
+    auto assetPath = "/Users/keegan/Library/Application Support/minecraft/versions/1.15/1.15/assets/minecraft";
 
-//    auto blockFilePath = "/Users/keegan/Desktop/Enklume-master/out.txt";
-//    auto assetPath = "/Users/keegan/Library/Application Support/minecraft/versions/1.15/1.15/assets/minecraft";
-//
-//    Reader r(assetPath);
-//    r.readBlocks(blockFilePath);
-//    r.readAssets();
-//
-//    Scene scene;
-//    r.readIntoScene(scene);
-//    setCameraAndLights(scene);
-//
-//    RenderOptions renderOptions;
-//    renderOptions.maxDepth = 1;
-//    renderOptions.threadCount = 8;
-//    renderOptions.horizontalResolution = 320;
-//    renderOptions.verticalResolution = 320;
-//
-//    rt::Image image(renderOptions.horizontalResolution, renderOptions.verticalResolution);
-//
-//    rt::RenderContext renderContext;
-//    renderContext.scene = &scene;
-//    renderContext.options = &renderOptions;
-//    renderContext.image = &image;
-//
-//    rt::rayTrace(renderContext);
-//
-//    std::ofstream out("my.pgm");
-//    image.writeBinaryPgm(out);
-//
-//    scene.getMaterial(0, 0, 0, 0);
+    Reader r(assetPath);
+    r.readBlocks(blockFilePath);
+    r.readAssets();
+
+    Scene scene;
+    r.readIntoScene(scene);
+    setCameraAndLights(scene);
+
+    RenderOptions renderOptions;
+    renderOptions.maxDepth = 1;
+    renderOptions.threadCount = 8;
+    renderOptions.horizontalResolution = 320;
+    renderOptions.verticalResolution = 320;
+
+    rt::Image image(renderOptions.horizontalResolution, renderOptions.verticalResolution);
+
+    rt::RenderContext renderContext;
+    renderContext.scene = &scene;
+    renderContext.options = &renderOptions;
+    renderContext.image = &image;
+
+    rt::rayTrace(renderContext);
+
+    std::string myTime = std::to_string(std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()));
+
+    std::ofstream out("./output/"+myTime+".pgm");
+    image.writeBinaryPgm(out);
+
+    scene.getMaterial(0, 0, 0, 0);
 
     return 0;
 }
