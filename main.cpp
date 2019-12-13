@@ -9,22 +9,6 @@
 #include "image.h"
 #include "reader.h"
 
-void test() {
-    using namespace rt;
-
-    Ray ray(Vector3d(0.2,0.5,-3), Vector3d(0,0,1));
-    Block block(Vector3i(0,0,0), 0);
-    HitRecord hit;
-
-    bool res = block.doesHit(ray, hit);
-
-    std::cout << res << '\n';
-    std::cout << hit.distance << '\n';
-    std::cout << hit.point << '\n';
-    std::cout << hit.normal << '\n';
-
-}
-
 void setScene1(rt::Scene &s, double widthAspect, double heightAspect) {
     using namespace rt;
 
@@ -80,13 +64,6 @@ void setScene1(rt::Scene &s, double widthAspect, double heightAspect) {
 
     s.camera = camera;
 
-//    auto *camera = new PerspectiveCamera;
-//    camera->focalPoint = Vector3d(-80,90,35);
-//    camera->lookPoint = Vector3d(-75,70,55);
-//    camera->upVector = Vector3d(0,1,0);
-//    camera->imagePlaneDistance = 1;
-//
-
     Sphere s1;
     s1.type = -1;
     s1.r = 5;
@@ -105,11 +82,11 @@ void setScene1(rt::Scene &s, double widthAspect, double heightAspect) {
     s3.p = Vector3d(-33, 75, 1149);
     s.spheres.push_back(s3);
 
-    Sphere s4;
-    s4.type = -1;
-    s4.r = 0.5;
-    s4.p = Vector3d(-17.5, 66, 1133);
-    s.spheres.push_back(s4);
+    //~ Sphere s4;
+    //~ s4.type = -1;
+    //~ s4.r = 0.5;
+    //~ s4.p = Vector3d(-17.5, 66, 1133);
+    //~ s.spheres.push_back(s4);
 
     Sphere s5;
     s5.type = -1;
@@ -147,25 +124,74 @@ void setScene1(rt::Scene &s, double widthAspect, double heightAspect) {
 }
 
 void setScene2(rt::Scene &s, double widthAspect, double heightAspect) {
+	using namespace rt;
+	auto blockFilePath = "./map/my-minecraft-map.txt";
 
+    Reader r;
+    r.readBlocks(blockFilePath);
+    r.readAssets();
+    r.readIntoScene(s);
+    
+    LightSource light;
+    light.position = Vector3d(-200,200,1050);
+    light.emittance = Vector3d(1,1,1);
+    s.lights.push_back(light);
+
+    s.ambientLight = Vector3d(0.3,0.3,0.3);
+
+    auto *camera = new PerspectiveCamera; 
+    camera->focalPoint = Vector3d(0,120,1200);
+    camera->lookPoint = camera->focalPoint - Vector3d(0,20,0);
+    camera->upVector = Vector3d(0,1,0);
+    camera->imagePlaneDistance = 0.5;
+    
+    camera->vB1 = -heightAspect;
+    camera->vB2 = heightAspect;
+    camera->hB1 = -widthAspect;
+    camera->hB2 = widthAspect;
+    camera->init();
+    s.camera = camera;
+
+
+    //~ Sphere s1;
+    //~ s1.type = -1;
+    //~ s1.r = 5;
+    //~ s1.p = Vector3d(-74, 67, 1127);
+    //~ s.spheres.push_back(s1);
+   
+    s.skyBoxEnabled = false;
 }
-
-
 
 int main(int argc, const char * argv[]) {
     using namespace rt;
 
-    int resScale = 300;
+
+    if (argc < 3) {
+		std::cout << "usage: sceneNum heightRes threadCount(default 8)\n";
+		return 1;
+	}
+	
+	int sceneNum = std::stoi(argv[1]);
+	int resScale = std::stoi(argv[2]);
+	
+	
+	
     double heightAspect = 1;
     double widthAspect = 1.6;
-
+    
     Scene scene;
-    setScene1(scene, widthAspect, heightAspect);
-    setScene2(scene, widthAspect, heightAspect);
+    if (sceneNum == 1) {
+		setScene1(scene, widthAspect, heightAspect);
+	} else if (sceneNum == 2) {
+	    setScene2(scene, widthAspect, heightAspect);
+	}
 
     RenderOptions renderOptions;
     renderOptions.maxDepth = 10;
     renderOptions.threadCount = 8;
+	if (argc == 4) {
+		renderOptions.threadCount = std::stoi(argv[3]);
+	}
     renderOptions.horizontalResolution = resScale * widthAspect;
     renderOptions.verticalResolution = resScale * heightAspect;
 
@@ -185,7 +211,7 @@ int main(int argc, const char * argv[]) {
 
     std::string myTime = std::to_string(std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()));
 
-    std::ofstream out("./output/"+myTime+".ppm");
+    std::ofstream out("./output/scene"+std::to_string(sceneNum)+"_"+myTime+".ppm");
     image.writeBinaryPgm(out);
 
     scene.getMaterial(0, 0, 0, 0);
