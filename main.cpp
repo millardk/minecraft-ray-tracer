@@ -9,7 +9,7 @@
 #include "image.h"
 #include "reader.h"
 
-void setScene1(rt::Scene &s, double widthAspect, double heightAspect) {
+void setScene2(rt::Scene &s, double widthAspect, double heightAspect) {
     using namespace rt;
 
     auto blockFilePath = "./map/my-minecraft-map.txt";
@@ -117,7 +117,7 @@ void setScene1(rt::Scene &s, double widthAspect, double heightAspect) {
     s.skySphere = skySphere;
 }
 
-void setScene2(rt::Scene &s, double widthAspect, double heightAspect) {
+void setScene1(rt::Scene &s, double widthAspect, double heightAspect) {
 	using namespace rt;
 	auto blockFilePath = "./map/my-minecraft-map.txt";
 
@@ -137,7 +137,7 @@ void setScene2(rt::Scene &s, double widthAspect, double heightAspect) {
     camera->focalPoint = Vector3d(0,120,1200);
     camera->lookPoint = camera->focalPoint - Vector3d(0,20,0);
     camera->upVector = Vector3d(1,0,0);
-    camera->imagePlaneDistance = 0.5;
+    camera->imagePlaneDistance = 0.65;
     
     camera->vB1 = -heightAspect;
     camera->vB2 = heightAspect;
