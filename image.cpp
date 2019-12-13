@@ -4,6 +4,8 @@
 
 #include "image.h"
 
+#include <fstream>
+
 using namespace rt;
 
 void Pixel::set(uint8_t r, uint8_t g, uint8_t b) {
@@ -15,13 +17,11 @@ void Pixel::set(uint8_t r, uint8_t g, uint8_t b) {
 Pixel::Pixel(uint8_t r_, uint8_t g_, uint8_t b_): r(r_), g(g_), b(b_) {}
 
 Image::Image(const int width, const int height):width(width), height(height) {
-    this->pixels = new Pixel[width*height];
-    memset(this->pixels, 0, sizeof(Pixel)*width*height);
+    pixels.reserve(width*height);
+    for(int x = 0; x < width*height; x++)
+        pixels.push_back(Pixel(0,0,0));
 }
 
-Image::~Image() {
-    delete pixels;
-}
 
 Pixel &Image::pxAt(int row, int col) {
     return pixels[width*row+col];
@@ -56,4 +56,32 @@ void Image::writeBinaryPgm(std::ostream &out) const {
     }
     delete[] row;
 }
+
+Image::Image(std::string filename) {
+    std::ifstream in(filename);
+
+    std::string magicNumber;
+    in >> magicNumber >> width >> height;
+
+    in.get();
+    pixels.reserve(width*height);
+
+    for (int x = 0; x < width; x++) {
+        for (int y = 0; y < height; y++) {
+            uint8_t r = in.get();
+            uint8_t g = in.get();
+            uint8_t b = in.get();
+            pixels.push_back(Pixel(r,g,b));
+        }
+    }
+
+
+}
+
+Pixel Image::sampleAt(double a, double b) const {
+    int x = a * (width-1);
+    int y = a * (height-1);
+    return pxAt(y,x);
+}
+
 

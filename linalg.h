@@ -8,7 +8,18 @@
 #include <initializer_list>
 #include <string>
 
-namespace lin {
+namespace rt {
+
+#ifdef USE_EIGEN
+
+#include "Eigen/Dense"
+
+typedef lin::Vector3d Vector3d;
+typedef lin::Vector3i Vector3i;
+typedef lin::Vector4d Vector4d;
+typedef lin::Matrix4_4d Matrix4_4d;
+
+#else
 
 class Vector3d {
 public:
@@ -77,6 +88,7 @@ public:
     Vector3i(const Vector3i &v);
     int operator[](int x) const;
     int &operator[](int x);
+    Vector3i operator+(const Vector3i &v) const;
 
     std::string to_string() const;
 };
@@ -96,7 +108,16 @@ Vector4d operator*(const Vector4d &v, double s);
 Vector4d operator*(double s, const Vector4d &v);
 std::ostream& operator<<(std::ostream &o, const Vector4d &v);
 
+#endif
+
+struct Ray {
+    Vector3d o;
+    Vector3d d;
+
+    Ray(const Vector3d &o, const Vector3d &d);
+};
 
 }
+
 
 #endif //CS410_HW2_LINALG_H

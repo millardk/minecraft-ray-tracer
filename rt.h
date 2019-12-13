@@ -9,51 +9,48 @@
 #include <vector>
 #include <memory>
 #include <iostream>
+#include <unordered_map>
+#include <array>
 
 #include "image.h"
-#include "tinygltf/tiny_gltf.h"
 
-#ifdef USE_EIGEN
-#else
 #include "linalg.h"
-#endif
 
 namespace rt {
 
-#ifdef USE_EIGEN
-#else
-typedef lin::Vector3d Vector3d;
-typedef lin::Vector3i Vector3i;
-typedef lin::Vector4d Vector4d;
-typedef lin::Matrix4_4d Matrix4_4d;
-#endif
-
-// TODO rename o to p
-struct Ray {
-    Vector3d o;
-    Vector3d d;
-
-    Ray(const Vector3d &o, const Vector3d &d);
+struct Material {
+    Vector3d ka;
+    Vector3d kd;
+    Vector3d ks;
+    double ns;
+    Material(const Vector3d &ka, const Vector3d &kd, const Vector3d &ks, double ns): ka(ka), kd(kd), ks(ks), ns(ns) {}
+    Material(): ka(Vector3d(0.2,0.2,0.2)), kd(Vector3d(0.5,0.5,0.5)), ks(Vector3d(0.8,0.8,0.8)), ns(10) {}
+    Material(const Material &m) = default;
 };
 
-class Material {
-public:
-    static Material *makeFromGltfMaterial(const tinygltf::Material &m);
-
-    virtual ~Material() = default;
-    virtual std::pair<Vector3d, Vector3d> getBRDF(const Vector3d &toEye, const Vector3d &toLight, const Vector3d &normal) const = 0;
+struct MetaMaterial {
+    virtual Material getMaterialAt(double a, double b) const = 0;
 };
 
-struct PbrMaterial : public Material {
-    double alpha;
-    Vector3d baseColor;
-    bool doubleSided;
-    std::string name;
-    double metallicFactor;
-    double roughnessFactor;
+struct BlockMaterial {
 
-    std::pair<Vector3d, Vector3d> getBRDF(const Vector3d &toEye, const Vector3d &toLight, const Vector3d &normal) const override ;
+    static BlockMaterial makeUniformBlock(MetaMaterial *mat);
+    static BlockMaterial makeTopAndSideBlock(MetaMaterial *top, MetaMaterial *side);
 
+    std::array<MetaMaterial*, 6> mats;
+    Material getMaterialAt(double a, double b, int side) const;
+};
+
+struct TextureMaterial : MetaMaterial {
+
+
+    Material getMaterialAt(double a, double b) const override;
+};
+
+struct SolidColorMaterial : MetaMaterial {
+    Material mat;
+    SolidColorMaterial(const Material &mat): mat(mat) {}
+    Material getMaterialAt(double a, double b) const override;
 };
 
 struct HitRecord {
@@ -61,7 +58,10 @@ struct HitRecord {
     double distance;
     Vector3d point;
     Vector3d normal;
-    int matIdx;
+    int a;
+    int b;
+    int side;
+    int type;
 };
 
 struct LightSource {
@@ -69,33 +69,36 @@ struct LightSource {
     Vector3d emittance;
 };
 
-class Object {
+enum BlockSides {
+    SIDE_TOP=0,SIDE_WEST=1,SIDE_NORTH=2,SIDE_EAST=3,SIDE_SOUTH=4,SIDE_BOTTOM=5
+};
+
+struct Block {
+    Vector3i position;
+    int type;
+
+    Block() {}
+    Block(const Vector3i &position, int type): position(position), type(type) {}
+
+    bool doesHit(const Ray &r, HitRecord &hit) const;
+};
+
+class BoxStore {
+private:
+    std::vector<Block> blocks;
+
+
 public:
-    virtual ~Object() = default;
-    virtual bool doesHit(const Ray &ray, HitRecord &hit) const = 0;
-};
+    BoxStore(std::vector<Block> blocks);
 
-struct Primitive {
-    Vector3i vIndicies;
-    int matIdx;
-};
-
-struct Mesh : public Object {
-    std::vector<Primitive> primitives;
-    std::vector<Vector3d> vertices;
-
-    bool doesHit(const Ray &ray, HitRecord &hit) const;
-};
-
-struct Sphere : public Object {
-    double radius;
-    Vector3d point;
-    int matIdx;
-
-    bool doesHit(const Ray &ray, HitRecord &hit) const;
+    bool doesHit(const Ray &r, HitRecord &hit) const;
 };
 
 struct Camera {
+    virtual Ray pixelRay(int r, int c, int hRes, int vRes) const = 0;
+};
+
+struct PerspectiveCamera : public Camera {
     Vector3d focalPoint;
     Vector3d lookPoint;
     Vector3d upVector;
@@ -114,20 +117,20 @@ struct Camera {
     double planeHeight; // image plane height
 
     void init();
-    Ray pixelRay(int r, int c, int hRes, int vRes) const;
+    Ray pixelRay(int r, int c, int hRes, int vRes) const override;
 };
 
 struct Scene {
-    std::vector<std::unique_ptr<Object>> objects;
-    std::vector<std::unique_ptr<Material>> materials;
+    Vector3d ambientLight;
+    BoxStore *boxStore;
+    std::unordered_map<int, BlockMaterial> blockMaterials;
     std::vector<LightSource> lights;
-    Camera camera;
+    Camera *camera;
 
-    Scene(const tinygltf::Model &m);
     Scene();
 
-    const Material& getMatAtIdx(int matIdx) const;
-    HitRecord findHit(const Ray &r) const;
+    Material getMaterial(int blockType, int side, double a, double b) const;
+    HitRecord getHit(const Ray &r) const;
 };
 
 struct RenderOptions {
@@ -145,7 +148,6 @@ struct RenderContext {
 
 void rayTrace(const RenderContext &ctx);
 
-int test();
 
 }
 

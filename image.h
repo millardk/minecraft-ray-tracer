@@ -6,6 +6,7 @@
 #define PATH_TRACER_IMAGE_H
 
 #include <iostream>
+#include <vector>
 
 namespace rt {
 
@@ -20,17 +21,23 @@ struct Pixel {
 };
 
 struct Image {
-    Pixel *pixels;
-    const int width;
-    const int height;
+    std::vector<Pixel> pixels;
+    int width;
+    int height;
 
     Image(int width, int height);
-    ~Image();
+    Image(std::string filename);
+
     Pixel &pxAt(int row, int col);
     const Pixel &pxAt(int row, int col) const;
     void writePgm(std::ostream &out) const;
     void writeBinaryPgm(std::ostream &out) const;
+
+
+    Pixel sampleAt(double a, double b) const;
 };
+
+    typedef Image Texture;
 
 }
 
