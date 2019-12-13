@@ -18,28 +18,38 @@
 
 namespace rt {
 
-struct TextureMaterialTemplate {
+struct MaterialPart {
     double ambient;
     double diffuse;
     double specular;
-};
+    double reflective;
+    double ns;
 
+    MaterialPart() = default;
+    MaterialPart(double ambient, double diffuse, double specular, double reflective, double ns);
+};
 
 struct Material {
     Vector3d ka;
     Vector3d kd;
     Vector3d ks;
+    Vector3d kr;
     double ns;
 
-    static Material matFromHex(int r, int g, int b);
-    static Material matFromPixel(Pixel p);
-
-    Material(const Vector3d &ka, const Vector3d &kd, const Vector3d &ks, double ns): ka(ka), kd(kd), ks(ks), ns(ns) {}
-    Material(): ka(Vector3d(0.2,0.2,0.2)), kd(Vector3d(0.5,0.5,0.5)), ks(Vector3d(0.8,0.8,0.8)), ns(10) {}
+    Material(const Vector3d &ka, const Vector3d &kd, const Vector3d &ks, const Vector3d &kr, double ns): ka(ka), kd(kd), ks(ks), kr(kr), ns(ns) {}
+    Material(): ka(Vector3d(0.2,0.2,0.2)), kd(Vector3d(0.5,0.5,0.5)), ks(Vector3d(0.8,0.8,0.8)), kr(Vector3d(0,0,0)), ns(10) {}
     Material(const Material &m) = default;
 };
 
 struct MetaMaterial {
+    MaterialPart temp;
+
+    Material matFromHex(int r, int g, int b) const;
+    Material matFromPixel(Pixel p) const;
+
+    MetaMaterial() {}
+    MetaMaterial(MaterialPart temp): temp(temp) {}
+
     virtual Material getMaterialAt(double a, double b) const = 0;
     virtual Vector3d getColorAt(double a, double b) const = 0;
 };
@@ -56,9 +66,9 @@ struct BlockMaterial {
 struct TextureMaterial : MetaMaterial {
     Texture *t = nullptr;
 
-
-    TextureMaterial() = default;
+    TextureMaterial() {}
     TextureMaterial(Texture *t): t(t) {}
+    TextureMaterial(Texture *t, MaterialPart temp): t(t), MetaMaterial(temp) {}
 
     Vector3d getColorAt(double a, double b) const override;
     Material getMaterialAt(double a, double b) const override;
@@ -66,7 +76,9 @@ struct TextureMaterial : MetaMaterial {
 
 struct SolidColorMaterial : MetaMaterial {
     Material mat;
-    SolidColorMaterial(const Material &mat): mat(mat) {}
+    SolidColorMaterial(const Pixel &pixel, MaterialPart temp): MetaMaterial(temp) {
+        mat = matFromPixel(pixel);
+    }
     Vector3d getColorAt(double a, double b) const override;
     Material getMaterialAt(double a, double b) const override;
 };
@@ -86,7 +98,7 @@ struct SkySphere {
     Vector3d position;
     double radius;
     TextureMaterial material;
-
+    double radiiScale = 2;
 
     Vector3d getSkyColor(const Ray &ray) const;
     bool intersect(const Ray &ray, Vector3d &v) const;
@@ -132,7 +144,7 @@ struct BlockContainer {
 };
 
 
-constexpr int ContainerSize = 8;
+constexpr int ContainerSize = 12;
 
 
 class BlockStore {
@@ -174,12 +186,24 @@ struct PerspectiveCamera : public Camera {
     Ray pixelRay(int r, int c, int hRes, int vRes) const override;
 };
 
+struct Sphere {
+    double r;
+    Vector3d p;
+    int type;
+
+    bool doesHit(const Ray &r, HitRecord &hit) const;
+};
+
 struct Scene {
     Vector3d ambientLight;
     BlockStore *blockStore;
     std::unordered_map<int, BlockMaterial> blockMaterials;
     std::vector<LightSource> lights;
+    std::vector<Sphere> spheres;
     Camera *camera;
+    std::vector<Material> sphereMaterials;
+
+
 
     bool skyBoxEnabled;
     bool textureSkySphereEnabled;

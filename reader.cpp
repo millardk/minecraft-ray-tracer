@@ -8,14 +8,6 @@
 
 using namespace rt;
 
-//Example 2
-//Load PNG file from disk to memory first, then decode to raw pixels in memory.
-
-
-
-
-Reader::Reader(std::string assetPath): assetPath(assetPath) {}
-
 void Reader::readBlocks(std::string blockFilePath) {
     std::ifstream in(blockFilePath);
     while (in.peek() != EOF) {
@@ -51,30 +43,44 @@ void Reader::readAssets() {
     auto log_oak_tex = new Texture("./textures/log_oak.PPM");
     auto wool_colored_red_tex = new Texture("./textures/wool_colored_red.PPM");
     auto wool_colored_green_tex = new Texture("./textures/wool_colored_green.PPM");
+    auto wool_colored_silver_tex = new Texture("./textures/wool_colored_silver.PPM");
     auto dirt_tex = new Texture("./textures/dirt.PPM");
     auto gravel_tex = new Texture("./textures/gravel.PPM");
-    auto coal_ore_tex = new Texture("./textures/gravel.PPM");
+    auto coal_ore_tex = new Texture("./textures/coal_ore.PPM");
     auto diamond_ore_tex = new Texture("./textures/diamond_ore.PPM");
+    auto stone_tex = new Texture("./textures/stone.PPM");
+    auto sandstone_top_tex = new Texture("./textures/sandstone_top.PPM");
+    auto sandstone_normal_tex = new Texture("./textures/sandstone_normal.PPM");
+    auto gold_block_tex = new Texture("./textures/gold_block.PPM");
 
 
 
-    auto defaultMat = new SolidColorMaterial(Material::matFromHex(255,255,255));
+    MaterialPart watery(0.2,0.3,0.3,0.6,10);
+    MaterialPart shiny(0.3,0.6,0.8,0.3,10);
+    MaterialPart rough(0.3,0.8,0.6,0.2,10);
+
+    auto defaultMat = new SolidColorMaterial(Pixel(255,255,255), rough);
 //    auto waterMat = new SolidColorMaterial(matFromHex(156, 211, 219));
 //    auto dirtMat = new SolidColorMaterial(matFromHex(155, 118, 83));
 //    auto grassMat = new SolidColorMaterial(matFromHex(86, 125, 70));
 //    auto sandMat = new SolidColorMaterial(matFromHex(194, 178, 128));
 
 //    auto grassTopMat = new TextureMaterial(wool_colored_green_tex);
-    auto grassSideMat = new TextureMaterial(grass_side_tex);
-    auto waterMat = new TextureMaterial(water_still_tex);
-    auto sandMat = new TextureMaterial(sand_tex);
-    auto logOakMat = new TextureMaterial(log_oak_tex);
-    auto diamondBlockMat = new TextureMaterial(diamond_block_tex);
-    auto redWoolMat = new TextureMaterial(wool_colored_red_tex);
-    auto greenWoolMat = new TextureMaterial(wool_colored_green_tex);
-    auto dirtMat = new TextureMaterial(dirt_tex);
-    auto gravelMat = new TextureMaterial(gravel_tex);
-
+    auto grassSideMat = new TextureMaterial(grass_side_tex, rough);
+    auto waterMat = new TextureMaterial(water_still_tex, watery);
+    auto sandMat = new TextureMaterial(sand_tex, rough);
+    auto logOakMat = new TextureMaterial(log_oak_tex, rough);
+    auto diamondBlockMat = new TextureMaterial(diamond_block_tex, shiny);
+    auto redWoolMat = new TextureMaterial(wool_colored_red_tex, rough);
+    auto greenWoolMat = new TextureMaterial(wool_colored_green_tex, rough);
+    auto silverWoolMat = new TextureMaterial(wool_colored_silver_tex, shiny);
+    auto dirtMat = new TextureMaterial(dirt_tex, rough);
+    auto gravelMat = new TextureMaterial(gravel_tex, rough);
+    auto stoneMat = new TextureMaterial(stone_tex, shiny);
+    auto sandStoneTopMat = new TextureMaterial(sandstone_top_tex, rough);
+    auto sandStoneNormalMat = new TextureMaterial(sandstone_normal_tex, rough);
+    auto diamondOreMat = new TextureMaterial(diamond_ore_tex, rough);
+    auto goldBlockMat = new TextureMaterial(gold_block_tex, shiny);
 
 
 
@@ -87,17 +93,30 @@ void Reader::readAssets() {
     BlockMaterial wool = BlockMaterial::makeUniformBlock(redWoolMat);
     BlockMaterial leaves = BlockMaterial::makeUniformBlock(greenWoolMat);
     BlockMaterial gravel = BlockMaterial::makeUniformBlock(gravelMat);
+    BlockMaterial diamondBlock = BlockMaterial::makeUniformBlock(diamondBlockMat);
+    BlockMaterial stone = BlockMaterial::makeUniformBlock(stoneMat);
+    BlockMaterial sandStone = BlockMaterial::makeTopAndSideBlock(sandStoneTopMat, sandStoneNormalMat);
+    BlockMaterial diamondOre = BlockMaterial::makeUniformBlock(diamondOreMat);
+    BlockMaterial goldBlock = BlockMaterial::makeUniformBlock(goldBlockMat);
+    BlockMaterial silverWool = BlockMaterial::makeUniformBlock(goldBlockMat);
+
 
 
     blockMaterials[0] = defaultBlock;
+    blockMaterials[STONE] = stone;
     blockMaterials[GRASS] = grass;
     blockMaterials[DIRT] = dirt;
     blockMaterials[WATER] = water;
+    blockMaterials[SANDSTONE] = sandStone;
     blockMaterials[SAND] = sand;
     blockMaterials[LOG] = log;
-    blockMaterials[WOOL] = wool;
+    blockMaterials[WOOL] = diamondBlock;
     blockMaterials[LEAVES] = leaves;
-
+    blockMaterials[GRAVEL] = gravel;
+    blockMaterials[DIAMOND_BLOCK] = diamondBlock;
+    blockMaterials[DIAMOND_ORE] = diamondOre;
+    blockMaterials[GOLD_BLOCK] = silverWool;
+    blockMaterials[IRON_BLOCK] = goldBlock;
 }
 
 void Reader::readIntoScene(Scene &s) {

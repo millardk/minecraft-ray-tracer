@@ -2,4 +2,3 @@ cmake-build-debug/
 .idea/
 scenes/
 output/
-textures/sky_box11.ppm

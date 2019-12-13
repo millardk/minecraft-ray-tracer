@@ -25,13 +25,12 @@ void test() {
 
 }
 
-void setScene1(rt::Scene &s) {
+void setScene1(rt::Scene &s, double widthAspect, double heightAspect) {
     using namespace rt;
 
-    auto blockFilePath = "/Users/keegan/Desktop/Enklume-master/out.txt";
-    auto assetPath = "/Users/keegan/Library/Application Support/minecraft/versions/1.15/1.15/assets/minecraft";
+    auto blockFilePath = "./map/my-minecraft-map.txt";
 
-    Reader r(assetPath);
+    Reader r;
     r.readBlocks(blockFilePath);
     r.readAssets();
     r.readIntoScene(s);
@@ -41,19 +40,45 @@ void setScene1(rt::Scene &s) {
 //    light.emittance = Vector3d(1,1,1);
 //    s.lights.push_back(light);
 
+    double lightAmt = 1.5;
+    int lightCount = 4;
+    double l = lightAmt/lightCount;
+
     LightSource light;
-    light.position = Vector3d(-100,90,1000);
-    light.emittance = Vector3d(1,1,1);
+    light.position = Vector3d(-200,200,1050);
+    light.emittance = Vector3d(l,l,l);
     s.lights.push_back(light);
+
+    LightSource light2;
+    light2.position = Vector3d(-198,200,1052);
+    light2.emittance = Vector3d(l,l,l);
+    s.lights.push_back(light2);
+
+    LightSource light3;
+    light3.position = Vector3d(-199,198,1051);
+    light3.emittance = Vector3d(l,l,l);
+    s.lights.push_back(light3);
+
+    LightSource light4;
+    light4.position = Vector3d(-200,203,1050);
+    light4.emittance = Vector3d(l,l,l);
+    s.lights.push_back(light4);
 
     s.ambientLight = Vector3d(0.3,0.3,0.3);
 
-
     auto *camera = new PerspectiveCamera;
-    camera->focalPoint = Vector3d(-50,80,1090);
-    camera->lookPoint = Vector3d(-25,64,1150);
+    camera->focalPoint = Vector3d(-70,90,1080);
+    camera->lookPoint = Vector3d(-45,70,1150);
     camera->upVector = Vector3d(0,1,0);
-    camera->imagePlaneDistance = 1.5;
+    camera->imagePlaneDistance = 2.0;
+
+    camera->vB1 = -heightAspect;
+    camera->vB2 = heightAspect;
+    camera->hB1 = -widthAspect;
+    camera->hB2 = widthAspect;
+    camera->init();
+
+    s.camera = camera;
 
 //    auto *camera = new PerspectiveCamera;
 //    camera->focalPoint = Vector3d(-80,90,35);
@@ -62,13 +87,48 @@ void setScene1(rt::Scene &s) {
 //    camera->imagePlaneDistance = 1;
 //
 
-    camera->vB1 = -1;
-    camera->vB2 = 1;
-    camera->hB1 = -1;
-    camera->hB2 = 1;
-    camera->init();
+    Sphere s1;
+    s1.type = -1;
+    s1.r = 5;
+    s1.p = Vector3d(-74, 67, 1127);
+    s.spheres.push_back(s1);
 
-    s.camera = camera;
+    Sphere s2;
+    s2.type = -1;
+    s2.r = 5;
+    s2.p = Vector3d(-45, 85, 1172);
+    s.spheres.push_back(s2);
+
+    Sphere s3;
+    s3.type = -1;
+    s3.r = 5;
+    s3.p = Vector3d(-33, 75, 1149);
+    s.spheres.push_back(s3);
+
+    Sphere s4;
+    s4.type = -1;
+    s4.r = 0.5;
+    s4.p = Vector3d(-17.5, 66, 1133);
+    s.spheres.push_back(s4);
+
+    Sphere s5;
+    s5.type = -1;
+    s5.r = 5;
+    s5.p = Vector3d(21, 67, 1153);
+    s.spheres.push_back(s5);
+
+
+
+    Material sm;
+    sm.ka = Vector3d(0.1,0.1,0.1);
+    sm.kd = Vector3d(0.2,0.2,0.2);
+    sm.ks = Vector3d(1.0,1.0,1.0);
+    sm.kr = Vector3d(1.0,1.0,1.0);
+    sm.ns = 10;
+    s.sphereMaterials.push_back(sm);
+
+
+
 
 //    s.skyBoxEnabled = true;
 //    s.textureSkySphereEnabled = false;
@@ -82,24 +142,32 @@ void setScene1(rt::Scene &s) {
     skySphere.material = TextureMaterial(skyBoxTex);
     skySphere.position = Vector3d(s.camera->lookPoint[0],-20, s.camera->lookPoint[2]);
     skySphere.radius = 200;
+    skySphere.radiiScale = 1.8;
     s.skySphere = skySphere;
+}
 
-
+void setScene2(rt::Scene &s, double widthAspect, double heightAspect) {
 
 }
+
 
 
 int main(int argc, const char * argv[]) {
     using namespace rt;
 
+    int resScale = 300;
+    double heightAspect = 1;
+    double widthAspect = 1.6;
+
     Scene scene;
-    setScene1(scene);
+    setScene1(scene, widthAspect, heightAspect);
+    setScene2(scene, widthAspect, heightAspect);
 
     RenderOptions renderOptions;
     renderOptions.maxDepth = 10;
     renderOptions.threadCount = 8;
-    renderOptions.horizontalResolution = 500;
-    renderOptions.verticalResolution = 500;
+    renderOptions.horizontalResolution = resScale * widthAspect;
+    renderOptions.verticalResolution = resScale * heightAspect;
 
     rt::Image image(renderOptions.horizontalResolution, renderOptions.verticalResolution);
 

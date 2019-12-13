@@ -12,16 +12,21 @@
 namespace rt {
 
 enum BlockType {
+    STONE=1,
     GRASS=2,
     DIRT=3,
     WATER=9,
     SAND=12,
     GRAVEL=13,
     COAL_ORE=16,
-    DIAMOND_ORE=56,
-    LEAVES=18,
     LOG=17,
+    LEAVES=18,
+    SANDSTONE=24,
     WOOL=35,
+    DIAMOND_ORE=56,
+    DIAMOND_BLOCK=57,
+    GOLD_BLOCK=41,
+    IRON_BLOCK=42,
 };
 
 class Reader {
@@ -34,15 +39,12 @@ private:
         int z;
     };
 
-    std::string assetPath;
     std::vector<RawBlock> blocks;
 
     std::unordered_map<int,BlockMaterial> blockMaterials;
     std::unordered_set<int> uniqueBlocks;
 
 public:
-    Reader(std::string assetPath);
-
     void readBlocks(std::string blockFilePath);
     void readAssets();
     void readIntoScene(Scene &s);

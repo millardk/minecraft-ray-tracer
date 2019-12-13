@@ -224,18 +224,22 @@ HitRecord Scene::getHit(const Ray &r) const {
     HitRecord hit;
     blockStore->doesHit(r, hit);
 
-//    for (const auto &x : objects) {
-//        const Object &object = *x;
-//        if (object.doesHit(r, cur) && (!hit.didHit|| cur.distance < hit.distance) ) {
-//            hit = cur;
-//            hit.didHit = true;
-//        }
-//    }
+    HitRecord cur;
+    for (const auto &sphere : spheres) {
+        if (sphere.doesHit(r, cur) && (!hit.didHit|| cur.distance < hit.distance) ) {
+            hit = cur;
+            hit.didHit = true;
+        }
+    }
 
     return hit;
 }
 
 Material Scene::getMaterial(int blockType, int side, double a, double b) const {
+    if (blockType < 0) {
+        return sphereMaterials[-blockType-1];
+    }
+
     auto x = blockMaterials.find(blockType);
     if (x == blockMaterials.end())
         return blockMaterials.at(0).getMaterialAt(a,b,side);
@@ -287,7 +291,7 @@ Vector3d SkySphere::getSkyColor(const Ray &ray) const {
 
     double elev = std::abs(fromCenter[1]) / radius;
 
-    double radii = std::sqrt(1.000000001-elev*elev) / 2;
+    double radii = std::sqrt(1.000000001-elev*elev) / radiiScale;
     double angle = std::atan2(fromCenter[2], fromCenter[0])-1; // +1 to rotate the sky11 tex
 
     double x = radii * std::cos(angle) + 0.5;
@@ -349,17 +353,15 @@ Vector3d traceRayHelper(const Scene &scene, const Ray&ray, int depth, int maxDep
     }
 
     const Material &material = scene.getMaterial(hit.type, hit.side, hit.a, hit.b);
+
     const Vector3d incomingReversed = -ray.d;
-
-    const Vector3d reflectDir = 2 * incomingReversed.dot(hit.normal) * hit.normal - incomingReversed;
-    const Ray reflectRay(hit.point, reflectDir);
-    const Vector3d reflectColor = traceRayHelper(scene, reflectRay, depth+1, maxDepth);
-
     Vector3d reflectSpecularScaled;
-    // specular
-    double coefficient = incomingReversed.dot(reflectRay.d);
-    if (coefficient > 0) {
-        reflectSpecularScaled = entrywiseProduct(material.ks, reflectColor) * pow(coefficient, material.ns);
+    if (material.kr.norm() > 0) {
+        const Vector3d reflectDir = 2 * incomingReversed.dot(hit.normal) * hit.normal - incomingReversed;
+        const Ray reflectRay(hit.point, reflectDir);
+        const Vector3d reflectColor = traceRayHelper(scene, reflectRay, depth + 1, maxDepth);
+        // reflective
+        reflectSpecularScaled = entrywiseProduct(material.kr, reflectColor);
     }
 
     Vector3d lightsColor = getLightContribution(scene, incomingReversed, hit, material);
@@ -419,7 +421,7 @@ Vector3d SolidColorMaterial::getColorAt(double a, double b) const {
 }
 
 Material TextureMaterial::getMaterialAt(double a, double b) const {
-    return Material::matFromPixel(t->sampleAt(a,b));
+    return matFromPixel(t->sampleAt(a,b));
 }
 
 Vector3d TextureMaterial::getColorAt(double a, double b) const {
@@ -448,23 +450,22 @@ Material BlockMaterial::getMaterialAt(double a, double b, int side) const {
     return mats[side]->getMaterialAt(a,b);
 }
 
-Material Material::matFromHex(int r, int g, int b) {
+Material MetaMaterial::matFromHex(int r, int g, int b) const {
     Material ret;
     const Vector3d scaledValues = Vector3d(
             r/255.0L,
             g/255.0L,
             b/255.0L);
 
-    ret.ka = 0.3 * scaledValues;
-    ret.kd = 0.7 * scaledValues;
-    ret.ks = 0.9 * scaledValues;
-    ret.ns = 10;
-
+    ret.ka = temp.ambient * scaledValues;
+    ret.kd = temp.diffuse * scaledValues;
+    ret.ks = temp.specular * scaledValues;
+    ret.kr = temp.reflective * scaledValues;
+    ret.ns = temp.ns;
     return ret;
-
 }
 
-Material Material::matFromPixel(Pixel p) {
+Material MetaMaterial::matFromPixel(Pixel p) const {
     return matFromHex(p.r,p.g,p.b);
 }
 
@@ -540,4 +541,30 @@ bool BlockContainer::doesIntersectBox(const Ray &r) const {
 
 int BlockContainer::getChunkPos(int pos, int size) {
     return (int)std::floor((double) pos / size);
+}
+
+MaterialPart::MaterialPart(double ambient, double diffuse, double specular, double reflective, double ns) : ambient(
+        ambient), diffuse(diffuse), specular(specular), reflective(reflective), ns(ns) {}
+
+bool Sphere::doesHit(const Ray &ray, HitRecord &hit) const {
+
+    Vector3d direct =  p - ray.o;
+    double directLen = direct.norm();
+    double projectLen = direct.dot(ray.d);
+    double dsq = r * r - (directLen * directLen - projectLen * projectLen);
+
+    if (dsq > 0) {
+        double tval = projectLen - sqrt(dsq);
+        if (tval < 1e-9)
+            return false;
+
+        hit.point = ray.o + (projectLen - std::sqrt(dsq)) * ray.d;
+        hit.distance = (hit.point - ray.o).norm();
+        hit.normal = hit.point - p; hit.normal.normalize();
+        hit.type = type;
+
+        return true;
+    } else {
+        return false;
+    }
 }
