@@ -184,11 +184,11 @@ int main(int argc, const char * argv[]) {
     Scene scene;
     if (sceneNum == 1) {
         heightAspect = 1;
-        widthAspect = 1.6;
+        widthAspect = 1;
 		setScene1(scene, widthAspect, heightAspect);
 	} else if (sceneNum == 2) {
         heightAspect = 1;
-        widthAspect = 1;
+        widthAspect = 1.6;
 	    setScene2(scene, widthAspect, heightAspect);
 	}
 
