@@ -22,7 +22,11 @@ Vector3d entrywiseProduct(const Vector3d &v1, const Vector3d &v2) {
             v1[2] * v2[2]);
 }
 
-rt::BoxStore::BoxStore(std::vector<rt::Block> blocks): blocks(blocks) {}
+rt::BlockStore::BlockStore(std::vector<rt::Block> blockList) {
+    for (Block b : blockList) {
+        addBlock(b);
+    }
+}
 
 
 Vector3d toVector3d(Vector3i v) {
@@ -116,22 +120,20 @@ bool Block::doesHit(const Ray &r, HitRecord &hit) const {
 
 
 // TODO ADD THE A AND B FUNCTIONALITY
-bool BoxStore::doesHit(const Ray &r, HitRecord &hit) const {
+bool BlockStore::doesHit(const Ray &r, HitRecord &hit) const {
     HitRecord cur;
     for (const auto &block : blocks) {
         if (block.doesHit(r, cur) && (!hit.didHit|| cur.distance < hit.distance) ) {
             hit = cur;
-            hit.didHit = true;
-            hit.type = block.type;
         }
     }
 
     double epsilon = 1e-9;
     if (hit.didHit) {
 
-        if (abs(hit.normal[0] > 1.0-epsilon)) {
-            hit.a = hit.point[1];
-            hit.b = hit.point[2];
+        if (abs(hit.normal[0]) > 1.0-epsilon) {
+            hit.a = hit.point[2];
+            hit.b = hit.point[1];
 
             if (hit.normal[0] > 0) {
                 hit.side =  SIDE_EAST;
@@ -139,7 +141,7 @@ bool BoxStore::doesHit(const Ray &r, HitRecord &hit) const {
                 hit.side = SIDE_WEST;
             }
 
-        } else if (abs(hit.normal[1] > 1.0-epsilon)) {
+        } else if (abs(hit.normal[1]) > 1.0-epsilon) {
             hit.a = hit.point[0];
             hit.b = hit.point[2];
 
@@ -149,7 +151,7 @@ bool BoxStore::doesHit(const Ray &r, HitRecord &hit) const {
                 hit.side = SIDE_BOTTOM;
             }
 
-        } else if (abs(hit.normal[2] > 1.0-epsilon)) {
+        } else if (abs(hit.normal[2]) > 1.0-epsilon) {
             hit.a = hit.point[0];
             hit.b = hit.point[1];
 
@@ -170,6 +172,21 @@ bool BoxStore::doesHit(const Ray &r, HitRecord &hit) const {
 
 
     return hit.didHit;
+}
+
+void BlockStore::addBlock(const Block &b) {
+    for (BlockContainer &container : blocks) {
+        if (container.addBlock(b)) {
+            return;
+        }
+    }
+
+    BlockContainer newBlock(
+            BlockContainer::getChunkPos(b.position[0],ContainerSize),
+            BlockContainer::getChunkPos(b.position[2], ContainerSize),
+            ContainerSize);
+    newBlock.addBlock(b);
+    blocks.push_back(newBlock);
 }
 
 // ******************* Camera *******************
@@ -205,7 +222,7 @@ Scene::Scene() {
 
 HitRecord Scene::getHit(const Ray &r) const {
     HitRecord hit;
-    boxStore->doesHit(r, hit);
+    blockStore->doesHit(r, hit);
 
 //    for (const auto &x : objects) {
 //        const Object &object = *x;
@@ -225,6 +242,60 @@ Material Scene::getMaterial(int blockType, int side, double a, double b) const {
 
     return blockMaterials.at(blockType).getMaterialAt(a,b,side);
 }
+
+Vector3d Scene::getSkyBoxColor(const Ray &ray) const {
+    if (!skyBoxEnabled) return Vector3d(0,0,0);
+    if (!textureSkySphereEnabled) return skyBoxColor;
+    return skySphere.getSkyColor(ray);
+}
+
+bool SkySphere::intersect(const Ray &ray, Vector3d &hitPoint) const {
+
+    Ray ray1 = ray;
+    ray1.o = ray.o + ray.d *1000000;
+    ray1.d = -ray.d;
+
+    Vector3d direct = position - ray1.o;
+    double directLen = direct.norm();
+    double projectLen = direct.dot(ray1.d);
+    double dsq = radius * radius - (directLen * directLen - projectLen * projectLen);
+
+//    double epislon = 1e-9;
+//    if (fabs(directLen - r) < epislon) {
+//        return false;
+//    }
+
+    if (dsq > 0) {
+        double tval = projectLen - sqrt(dsq);
+//        if (tval < 1e-9)
+//            return false;
+
+        hitPoint = ray1.o + (projectLen - std::sqrt(dsq)) * ray1.d;
+        return true;
+    } else {
+        return false;
+    }
+}
+
+Vector3d SkySphere::getSkyColor(const Ray &ray) const {
+    Vector3d ipt;
+
+    bool didIntersect = intersect(ray, ipt);
+    if (!didIntersect) return Vector3d(0,0,0);
+
+    Vector3d fromCenter =  ipt - position;
+
+    double elev = std::abs(fromCenter[1]) / radius;
+
+    double radii = std::sqrt(1.000000001-elev*elev) / 2;
+    double angle = std::atan2(fromCenter[2], fromCenter[0])-1; // +1 to rotate the sky11 tex
+
+    double x = radii * std::cos(angle) + 0.5;
+    double y = radii * std::sin(angle) + 0.5;
+
+    return material.getColorAt(x,y);
+}
+
 
 // ******************* Ray Tracing *******************
 
@@ -274,7 +345,7 @@ Vector3d traceRayHelper(const Scene &scene, const Ray&ray, int depth, int maxDep
 
     HitRecord hit = scene.getHit(ray);
     if (!hit.didHit) {
-        return Vector3d(0,0,0);
+        return scene.getSkyBoxColor(ray);
     }
 
     const Material &material = scene.getMaterial(hit.type, hit.side, hit.a, hit.b);
@@ -343,8 +414,17 @@ Material SolidColorMaterial::getMaterialAt(double a, double b) const {
     return mat;
 }
 
+Vector3d SolidColorMaterial::getColorAt(double a, double b) const {
+    return mat.kd;
+}
+
 Material TextureMaterial::getMaterialAt(double a, double b) const {
     return Material::matFromPixel(t->sampleAt(a,b));
+}
+
+Vector3d TextureMaterial::getColorAt(double a, double b) const {
+    auto pix =t->sampleAt(a,b);
+    return Vector3d(pix.r, pix.g, pix.b) / 255;
 }
 
 BlockMaterial BlockMaterial::makeUniformBlock(MetaMaterial *mat) {
@@ -386,4 +466,78 @@ Material Material::matFromHex(int r, int g, int b) {
 
 Material Material::matFromPixel(Pixel p) {
     return matFromHex(p.r,p.g,p.b);
+}
+
+Vector3i minVec(Vector3i v1, Vector3i v2) {
+    return Vector3i(
+            std::min(v1[0],v2[0]),
+            std::min(v1[1],v2[1]),
+            std::min(v1[2],v2[2]));
+}
+
+Vector3i maxVec(Vector3i v1, Vector3i v2) {
+    return Vector3i(
+            std::max(v1[0],v2[0]),
+            std::max(v1[1],v2[1]),
+            std::max(v1[2],v2[2]));
+}
+
+bool BlockContainer::addBlock(const Block &b) {
+    int chunkX  =  getChunkPos(b.position[0], ContainerSize);
+    int chunkZ  =  getChunkPos(b.position[2], ContainerSize);
+
+    if (chunkX == x && chunkZ == z){
+        min = minVec(min, b.position);
+        max = maxVec(max, b.position + Vector3i(1,1,1));
+        blocks.push_back(b);
+        return true;
+    }
+    return false;
+}
+
+bool BlockContainer::doesHit(const Ray &r, HitRecord &hit) const {
+    if (!doesIntersectBox(r)) return false;
+    HitRecord cur;
+    for (const auto &block : blocks) {
+        if (block.doesHit(r, cur) && (!hit.didHit|| cur.distance < hit.distance) ) {
+            hit = cur;
+            hit.didHit = true;
+            hit.type = block.type;
+        }
+    }
+    return hit.didHit;
+}
+
+bool BlockContainer::doesIntersectBox(const Ray &r) const {
+    double tmin = 1e-9, tmax = INFINITY;
+
+    if (r.d[0] != 0.0) {
+        double tx1 = (min[0] - r.o[0])/r.d[0];
+        double tx2 = (max[0] - r.o[0])/r.d[0];
+
+        tmin = std::max(tmin, std::min(tx1, tx2));
+        tmax = std::min(tmax, std::max(tx1, tx2));
+    }
+
+    if (r.d[1] != 0.0) {
+        double ty1 = (min[1] - r.o[1])/r.d[1];
+        double ty2 = (max[1] - r.o[1])/r.d[1];
+
+        tmin = std::max(tmin, std::min(ty1, ty2));
+        tmax = std::min(tmax, std::max(ty1, ty2));
+    }
+
+    if (r.d[2] != 0.0) {
+        double tz1 = (min[2] - r.o[2])/r.d[2];
+        double tz2 = (max[2] - r.o[2])/r.d[2];
+
+        tmin = std::max(tmin, std::min(tz1, tz2));
+        tmax = std::min(tmax, std::max(tz1, tz2));
+    }
+
+    return tmax >= tmin;
+}
+
+int BlockContainer::getChunkPos(int pos, int size) {
+    return (int)std::floor((double) pos / size);
 }

@@ -110,7 +110,7 @@ Image::Image(std::string filename) {
 
 Pixel Image::sampleAt(double a, double b) const {
     int x = std::abs((int)(a * width) % width);
-    int y = std::abs((int)(b * height) % height);
+    int y = height-std::abs((int)(b * height) % height)-1;
     return pxAt(y,x);
 }
 

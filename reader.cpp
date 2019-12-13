@@ -43,11 +43,19 @@ void Reader::readBlocks(std::string blockFilePath) {
 
 void Reader::readAssets() {
 
-    auto grass_top_tex = new Texture("./textures/green_wool.PPM");
+//    auto grass_top_tex = new Texture("./textures/green_wool.PPM");
     auto grass_side_tex = new Texture("./textures/grass_side.PPM");
-    auto water_still_tex = new Texture("./textures/diamond_block.PPM");
+    auto diamond_block_tex = new Texture("./textures/diamond_block.PPM");
+    auto water_still_tex = new Texture("./textures/water_still.PPM");
     auto sand_tex = new Texture("./textures/sand.PPM");
     auto log_oak_tex = new Texture("./textures/log_oak.PPM");
+    auto wool_colored_red_tex = new Texture("./textures/wool_colored_red.PPM");
+    auto wool_colored_green_tex = new Texture("./textures/wool_colored_green.PPM");
+    auto dirt_tex = new Texture("./textures/dirt.PPM");
+    auto gravel_tex = new Texture("./textures/gravel.PPM");
+    auto coal_ore_tex = new Texture("./textures/gravel.PPM");
+    auto diamond_ore_tex = new Texture("./textures/diamond_ore.PPM");
+
 
 
     auto defaultMat = new SolidColorMaterial(Material::matFromHex(255,255,255));
@@ -56,21 +64,40 @@ void Reader::readAssets() {
 //    auto grassMat = new SolidColorMaterial(matFromHex(86, 125, 70));
 //    auto sandMat = new SolidColorMaterial(matFromHex(194, 178, 128));
 
-    auto grassTopMat = new TextureMaterial(grass_top_tex);
+//    auto grassTopMat = new TextureMaterial(wool_colored_green_tex);
     auto grassSideMat = new TextureMaterial(grass_side_tex);
     auto waterMat = new TextureMaterial(water_still_tex);
     auto sandMat = new TextureMaterial(sand_tex);
     auto logOakMat = new TextureMaterial(log_oak_tex);
+    auto diamondBlockMat = new TextureMaterial(diamond_block_tex);
+    auto redWoolMat = new TextureMaterial(wool_colored_red_tex);
+    auto greenWoolMat = new TextureMaterial(wool_colored_green_tex);
+    auto dirtMat = new TextureMaterial(dirt_tex);
+    auto gravelMat = new TextureMaterial(gravel_tex);
+
+
+
 
     BlockMaterial defaultBlock = BlockMaterial::makeUniformBlock(defaultMat);
-    BlockMaterial grass = BlockMaterial::makeTopAndSideBlock(grassTopMat, logOakMat);
+    BlockMaterial grass = BlockMaterial::makeTopAndSideBlock(greenWoolMat, grassSideMat);
+    BlockMaterial dirt = BlockMaterial::makeUniformBlock(dirtMat);
     BlockMaterial sand = BlockMaterial::makeUniformBlock(sandMat);
     BlockMaterial water = BlockMaterial::makeUniformBlock(waterMat);
+    BlockMaterial log = BlockMaterial::makeUniformBlock(logOakMat);
+    BlockMaterial wool = BlockMaterial::makeUniformBlock(redWoolMat);
+    BlockMaterial leaves = BlockMaterial::makeUniformBlock(greenWoolMat);
+    BlockMaterial gravel = BlockMaterial::makeUniformBlock(gravelMat);
+
 
     blockMaterials[0] = defaultBlock;
     blockMaterials[GRASS] = grass;
+    blockMaterials[DIRT] = dirt;
     blockMaterials[WATER] = water;
     blockMaterials[SAND] = sand;
+    blockMaterials[LOG] = log;
+    blockMaterials[WOOL] = wool;
+    blockMaterials[LEAVES] = leaves;
+
 }
 
 void Reader::readIntoScene(Scene &s) {
@@ -81,6 +108,6 @@ void Reader::readIntoScene(Scene &s) {
         b.type = rb.id;
         blockVector.push_back(b);
     }
-    s.boxStore = new BoxStore(blockVector);
+    s.blockStore = new BlockStore(blockVector);
     s.blockMaterials = blockMaterials;
 }

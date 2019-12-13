@@ -18,6 +18,13 @@
 
 namespace rt {
 
+struct TextureMaterialTemplate {
+    double ambient;
+    double diffuse;
+    double specular;
+};
+
+
 struct Material {
     Vector3d ka;
     Vector3d kd;
@@ -34,6 +41,7 @@ struct Material {
 
 struct MetaMaterial {
     virtual Material getMaterialAt(double a, double b) const = 0;
+    virtual Vector3d getColorAt(double a, double b) const = 0;
 };
 
 struct BlockMaterial {
@@ -46,16 +54,20 @@ struct BlockMaterial {
 };
 
 struct TextureMaterial : MetaMaterial {
-    Texture *t;
+    Texture *t = nullptr;
 
+
+    TextureMaterial() = default;
     TextureMaterial(Texture *t): t(t) {}
 
+    Vector3d getColorAt(double a, double b) const override;
     Material getMaterialAt(double a, double b) const override;
 };
 
 struct SolidColorMaterial : MetaMaterial {
     Material mat;
     SolidColorMaterial(const Material &mat): mat(mat) {}
+    Vector3d getColorAt(double a, double b) const override;
     Material getMaterialAt(double a, double b) const override;
 };
 
@@ -70,6 +82,16 @@ struct HitRecord {
     int type;
 };
 
+struct SkySphere {
+    Vector3d position;
+    double radius;
+    TextureMaterial material;
+
+
+    Vector3d getSkyColor(const Ray &ray) const;
+    bool intersect(const Ray &ray, Vector3d &v) const;
+};
+
 struct LightSource {
     Vector3d position;
     Vector3d emittance;
@@ -82,41 +104,67 @@ enum BlockSides {
 struct Block {
     Vector3i position;
     int type;
-
     Block() {}
     Block(const Vector3i &position, int type): position(position), type(type) {}
 
     bool doesHit(const Ray &r, HitRecord &hit) const;
 };
 
-class BoxStore {
-private:
+struct BlockContainer {
+    int x;
+    int z;
+
+    static const int MAX_INT = 0x7FFFFFFF;
+    static const int MIN_INT = 0x80000000;
+
+    Vector3i min = Vector3i(MAX_INT,MAX_INT,MAX_INT);
+    Vector3i max = Vector3i(MIN_INT,MIN_INT,MIN_INT);
+
     std::vector<Block> blocks;
 
+    BlockContainer(int x, int z, int size) : x(x), z(z) {}
+
+    static int getChunkPos(int pos, int size);
+
+    bool doesIntersectBox(const Ray &r) const;
+    bool addBlock(const Block &b);
+    bool doesHit(const Ray &r, HitRecord &hit) const;
+};
+
+
+constexpr int ContainerSize = 8;
+
+
+class BlockStore {
+private:
+    std::vector<BlockContainer> blocks;
 
 public:
-    BoxStore(std::vector<Block> blocks);
+    BlockStore(std::vector<Block> blockList);
+
+    void addBlock(const Block &b);
 
     bool doesHit(const Ray &r, HitRecord &hit) const;
 };
 
 struct Camera {
+    Vector3d lookPoint;
+    Vector3d upVector;
+    Vector3d lv;
+    Vector3d hv;
+    Vector3d vv;
     virtual Ray pixelRay(int r, int c, int hRes, int vRes) const = 0;
 };
 
 struct PerspectiveCamera : public Camera {
     Vector3d focalPoint;
-    Vector3d lookPoint;
-    Vector3d upVector;
+
     double imagePlaneDistance;
     double vB1;
     double vB2;
     double hB1;
     double hB2;
 
-    Vector3d lv;
-    Vector3d hv;
-    Vector3d vv;
     Vector3d ipCpt; // image plane center point
 
     double planeWidth; // image plane width
@@ -128,13 +176,19 @@ struct PerspectiveCamera : public Camera {
 
 struct Scene {
     Vector3d ambientLight;
-    BoxStore *boxStore;
+    BlockStore *blockStore;
     std::unordered_map<int, BlockMaterial> blockMaterials;
     std::vector<LightSource> lights;
     Camera *camera;
 
+    bool skyBoxEnabled;
+    bool textureSkySphereEnabled;
+    SkySphere skySphere;
+    Vector3d skyBoxColor;
+
     Scene();
 
+    Vector3d getSkyBoxColor(const Ray &ray) const;
     Material getMaterial(int blockType, int side, double a, double b) const;
     HitRecord getHit(const Ray &r) const;
 };
@@ -144,6 +198,7 @@ struct RenderOptions {
     int verticalResolution;
     int maxDepth;
     int threadCount;
+    bool skyBoxEnabled;
 };
 
 struct RenderContext {

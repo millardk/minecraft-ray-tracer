@@ -13,10 +13,16 @@ namespace rt {
 
 enum BlockType {
     GRASS=2,
+    DIRT=3,
     WATER=9,
     SAND=12,
+    GRAVEL=13,
+    COAL_ORE=16,
+    DIAMOND_ORE=56,
+    LEAVES=18,
+    LOG=17,
+    WOOL=35,
 };
-
 
 class Reader {
 private:
